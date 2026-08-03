@@ -1,0 +1,15 @@
+# 測試產物（實測時產生的暫存檔，不要進版控）
+ai_report*.html
+_uxtest*
+sample_*.html
+*_標記版.html
+*_annotated.html
+*_標註*.html
+*_report.html
+*.md.tmp
+
+# OS / 編輯器
+Thumbs.db
+desktop.ini
+.DS_Store
+*.swp

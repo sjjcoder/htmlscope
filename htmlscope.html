@@ -1,0 +1,1932 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HTMLScope · HTML 標註閱讀器</title>
+<style>
+:root{--bg:#f6f7f6;--surface:#fff;--ink:#20282b;--ink2:#5a6a6e;--line:#dde3e1;--accent:#0e7b6c;--accent-soft:#e3f0ed;--chip:#eef1f0;--danger:#b4372e}
+@media (prefers-color-scheme: dark){:root{--bg:#15191a;--surface:#1d2224;--ink:#e6eae8;--ink2:#9fb0ac;--line:#323a3b;--accent:#3bb89f;--accent-soft:#1c322d;--chip:#272e2f;--danger:#e07a70}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",-apple-system,sans-serif;font-size:14px}
+/* flex-wrap + min-width:0 :英文介面標籤較長時會換行,不會把語言鈕擠出畫面外(實測有人以為切不回中文) */
+#topbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--line);flex:none}
+#topbar .logo{font-weight:800;white-space:nowrap}
+#docName{color:var(--ink2);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:60px}
+#topbar button{font-size:13px;background:var(--chip);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:5px 12px;cursor:pointer;white-space:nowrap}
+#topbar button:hover{border-color:var(--accent);color:var(--accent)}
+#topbar button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+#topbar button.primary:hover{color:#fff;filter:brightness(1.1)}
+#topbar button[hidden]{display:none}
+#home{flex:1;overflow-y:auto;padding:32px 20px}
+#home .inner{max-width:640px;margin:0 auto}
+#drop{border:2px dashed var(--line);border-radius:14px;padding:48px 24px;text-align:center;color:var(--ink2);cursor:pointer;background:var(--surface);transition:border-color .15s}
+#drop:hover,#drop.over{border-color:var(--accent);color:var(--accent)}
+#drop .big{font-size:17px;font-weight:700;margin-bottom:6px}
+#recents{margin-top:26px}
+#recents h3{font-size:14px;margin:0 0 8px;color:var(--ink2)}
+.rec{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:10px 14px;margin-bottom:8px;cursor:pointer}
+.rec:hover{border-color:var(--accent)}
+.rec .nm{font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rec .meta{color:var(--ink2);font-size:12px;white-space:nowrap}
+.rec .del{background:none;border:none;color:var(--ink2);cursor:pointer;font-size:15px;padding:2px 6px}
+.rec .del:hover{color:var(--danger)}
+.rec .nofile{color:var(--ink2);font-size:12px}
+#tips{margin-top:26px;color:var(--ink2);font-size:12.5px;line-height:1.8;background:var(--accent-soft);border:1px solid var(--line);border-radius:9px;padding:12px 16px}
+#tips p{margin:0 0 8px}
+#tips h4{margin:16px 0 6px;font-size:13px;color:var(--ink)}
+#tips h4:first-child{margin-top:4px}
+#tips ul{margin:0 0 4px;padding-left:20px}
+#tips li{margin:5px 0}
+#tips summary{cursor:pointer;font-weight:700;color:var(--ink);padding:5px 0}
+#tips summary:hover{color:var(--accent)}
+#tips details{margin-top:8px;border-top:1px dashed var(--line);padding-top:7px}
+/* 說明分層:示意圖不用點開就看得到(7/7 使用者反映「一大片條列,掃兩段就放棄」),
+   文字說明拆成 基本／進階／疑難 三段漸進式展開,技術細節不再擋在必讀路徑上 */
+#tips .g30{margin:4px 0 2px;font-weight:700;color:var(--ink)}
+#tips details summary .cnt{font-weight:400;color:var(--ink2);font-size:12px}
+/* 使用說明的小示意圖:純 HTML/CSS(無外部圖檔),隨主題自動配色 */
+.ug-flow{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:8px 0 4px}
+.ug-box{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:10.5px;color:var(--ink2);line-height:1.5}
+.ug-arrow{color:var(--ink2);font-size:13px;flex:none;text-align:center}
+.ug-cap{font-size:11px;color:var(--ink2);margin:0 0 14px}
+.ug-doc mark{background:rgba(242,196,20,.42);color:inherit;border-radius:2px;padding:0 2px}
+.ug-bar{display:flex;gap:4px;padding:8px 9px}
+.ug-dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+.ug-pop{width:108px}
+.ug-q{color:var(--ink2);font-size:9.5px;margin-bottom:5px}
+.ug-ta{height:14px;background:var(--chip);border-radius:4px;margin-bottom:5px}
+.ug-sendbtn{background:var(--accent);color:#fff;border-radius:4px;padding:2px 8px;font-size:9.5px;display:inline-block;float:right}
+.ug-person{text-align:center;min-width:74px}
+.ug-who{font-weight:700;color:var(--ink);font-size:11px;margin-bottom:4px}
+.ug-fico{font-size:15px;letter-spacing:1px}
+.ug-merge{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+/* 「我沒有 HTML 檔」入口:實測一般職員與大學生的文件都在 Word／Google Docs／PDF,
+   landing 與工具都沒交代怎麼取得 HTML 檔 —— 這是還沒進門就被擋掉的第一道牆。
+   除了教怎麼轉檔,更直接提供「貼上文字」讓人完全跳過轉檔這一步。 */
+#noFileRow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;margin-top:14px}
+#noFileRow button{font-size:13px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 14px;cursor:pointer}
+#noFileRow button:hover{border-color:var(--accent);color:var(--accent)}
+#noFileRow button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+#noFileRow button.primary:hover{color:#fff;filter:brightness(1.08)}
+#howto{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:14px 16px;color:var(--ink2);font-size:12.5px;line-height:1.75}
+#howto[hidden]{display:none}
+#howto h4{margin:0 0 8px;font-size:13px;color:var(--ink)}
+#howto dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 12px}
+#howto dt{font-weight:700;color:var(--ink);white-space:nowrap}
+#howto dd{margin:0}
+#howto .tip{margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);color:var(--ink)}
+#pasteOv{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px}
+#pasteOv[hidden]{display:none}
+#pasteBox{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.4);width:min(620px,100%);max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
+#pasteBox .ph{display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--line);font-weight:700;font-size:14px;color:var(--ink)}
+#pasteBox .px{margin-left:auto;background:none;border:none;color:var(--ink2);font-size:14px;cursor:pointer;padding:4px 8px}
+#pasteBox .px:hover{color:var(--danger)}
+#pasteBox .pdesc{padding:10px 16px 0;color:var(--ink2);font-size:12px;line-height:1.55}
+#pasteBox .pttl{margin:10px 16px 0;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink2)}
+#pasteBox .pttl input{flex:1;min-width:0;background:var(--chip);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:6px 9px;font:inherit;font-size:13px}
+#pasteBox textarea{flex:1;margin:10px 16px;min-height:190px;resize:vertical;background:var(--chip);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:inherit;font-size:13px;line-height:1.6}
+#pasteBox .pf{display:flex;gap:8px;align-items:center;padding:12px 16px;border-top:1px solid var(--line)}
+#pasteBox .pf .sp{margin-left:auto}
+#pasteBox .pf button{font-size:13px;border-radius:8px;padding:8px 16px;cursor:pointer;border:1px solid var(--line);background:var(--chip);color:var(--ink)}
+#pasteBox .pf button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+#pasteBox .pf button.primary:hover{filter:brightness(1.08)}
+#pasteBox .pf .perr{color:var(--danger);font-size:12px}
+#view{flex:1;width:100%;border:none;background:#fff;display:none}
+body.reading #home{display:none}
+body.reading #view{display:block}
+</style>
+</head>
+<body>
+<header id="topbar">
+  <span class="logo">📖 HTMLScope <span style="font-size:11px;color:var(--ink2);font-weight:400" id="logoSub"></span></span>
+  <span id="docName"></span>
+  <button id="btnHome" hidden></button>
+  <button id="btnOpen"></button>
+  <button id="btnLang"></button>
+</header>
+
+<div id="home">
+  <div class="inner">
+    <div id="drop">
+      <div class="big" id="dropBig"></div>
+      <div id="dropSub"></div>
+    </div>
+    <div id="noFileRow">
+      <button id="btnPaste" class="primary"></button>
+      <button id="btnHowto"></button>
+    </div>
+    <div id="howto" hidden></div>
+    <div id="recents"></div>
+    <div id="tips"></div>
+  </div>
+</div>
+
+<iframe id="view"></iframe>
+<input type="file" id="fileIn" accept=".html,.htm,text/html" hidden>
+
+<div id="pasteOv" hidden><div id="pasteBox">
+  <div class="ph"><span class="ptitle"></span><button class="px">✕</button></div>
+  <div class="pdesc"></div>
+  <div class="pttl"><span class="pttllab"></span><input id="pasteName" type="text" maxlength="80"></div>
+  <textarea id="pasteTA"></textarea>
+  <div class="pf"><span class="perr"></span><span class="sp"></span><button class="pcancel"></button><button class="pgo primary"></button></div>
+</div></div>
+
+<script>
+/* ================= 標註引擎（會被注入到文件 iframe / 含標記版檔案裡） ================= */
+var ENGINE_CSS = [
+/* 深淺色自動切換:UI 全部走這組變數 */
+'#annoBar,#annoPop,#annoPanel,#annoToggle,#annoStaticApp,#annoPromptOverlay,#annoDiffOverlay,.anno-menu{--as:#fff;--atx:#222;--amut:#888;--aln:#ccc;--achip:#f0f0f0;--amsg:#f4f4f4;--aacc:#0e7b6c;--adelb:#fdeceb;--adelt:#b4372e}',
+'@media (prefers-color-scheme: dark){#annoBar,#annoPop,#annoPanel,#annoToggle,#annoStaticApp,#annoPromptOverlay,#annoDiffOverlay,.anno-menu{--as:#23282a;--atx:#e6eae8;--amut:#9aa8a4;--aln:#454c4e;--achip:#2e3436;--amsg:#2b3133;--aacc:#3bb89f;--adelb:#3a201d;--adelt:#e07a70}}',
+'#annoBar[hidden],#annoPanel[hidden],#annoPop[hidden]{display:none!important}',
+'mark.anno{background:transparent;color:inherit;cursor:pointer;border-radius:2px;padding:0 1px}',
+'mark.anno:hover{filter:brightness(.9)}',
+'mark.anno.c-y{background:rgba(255,205,0,.38)}',
+'mark.anno.c-r{background:rgba(240,85,60,.32)}',
+'mark.anno.c-g{background:rgba(50,200,120,.30)}',
+'mark.anno.c-b{background:rgba(80,150,255,.30)}',
+'mark.anno.note{border-bottom:2px dotted #888}',
+'mark.anno.note::after{content:"📝";font-size:10px;vertical-align:super;margin-left:1px}',
+'mark.anno.approx{border-bottom:2px dashed #b88a2e}',
+'mark.anno.approx::before{content:"≈";font-size:9px;vertical-align:super;color:#b88a2e;margin-right:1px}',
+'mark.anno.flash{outline:2px solid #0e7b6c;outline-offset:1px}',
+'#annoBar,#annoPop,#annoPanel,#annoToggle{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;line-height:1.6;color:var(--atx)}',
+'#annoBar{position:fixed;z-index:2147483000;display:flex;gap:5px;background:var(--as);border:1px solid var(--aln);border-radius:999px;padding:6px 8px;box-shadow:0 4px 16px rgba(0,0,0,.25)}',
+'#annoBar button,#annoPop .ap-colors button{display:flex;align-items:center;gap:4px;width:auto;height:auto;min-width:0;min-height:0;border-radius:999px;border:1px solid var(--aln);background:var(--achip);color:var(--atx);cursor:pointer;padding:3px 9px;font-size:12px;white-space:nowrap;line-height:1.6}',
+'#annoBar button:hover,#annoPop .ap-colors button:hover{border-color:var(--aacc);color:var(--aacc)}',
+'.bdot{display:inline-block;width:11px;height:11px;border-radius:50%;flex:none}',
+'.bdot.c-y,.dot.c-y{background:#f2c414}',
+'.bdot.c-r,.dot.c-r{background:#e4574a}',
+'.bdot.c-g,.dot.c-g{background:#3cb878}',
+'.bdot.c-b,.dot.c-b{background:#4a90e2}',
+'#annoPop{position:fixed;z-index:2147483001;width:300px;background:var(--as);border:1px solid var(--aln);border-radius:10px;padding:12px;box-shadow:0 8px 28px rgba(0,0,0,.3);font-size:13px}',
+'#annoPop .ap-drag{display:flex;align-items:center;justify-content:space-between;cursor:move;color:var(--amut);font-size:12px;margin:-6px -6px 4px;padding:0 0 0 4px;user-select:none;touch-action:none}',
+'#annoPop .ap-close{background:none;border:none;color:var(--amut);cursor:pointer;font-size:13px;padding:2px 8px}',
+'#annoPop .ap-close:hover{color:var(--adelt)}',
+'#annoPop .ap-quote{color:var(--amut);font-size:12px;margin-bottom:8px;max-height:60px;overflow:auto}',
+'#annoPop textarea{width:100%;min-height:64px;resize:vertical;background:var(--achip);color:var(--atx);border:1px solid var(--aln);border-radius:6px;padding:6px 8px;font:inherit;font-size:13px;box-sizing:border-box}',
+'#annoPop .ap-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}',
+'#annoPop .ap-colors{display:flex;flex-wrap:wrap;gap:4px;margin-right:auto}',
+'#annoPop .ap-colors button{padding:2px 7px;font-size:11.5px}',
+'#annoPop .ap-colors button.sel{border-color:var(--atx);font-weight:700}',
+'#annoPop .ap-del,#annoPop .ap-save{font-size:12.5px;border-radius:6px;padding:4px 12px;cursor:pointer;border:1px solid var(--aln)}',
+'#annoPop .ap-del{background:var(--adelb);color:var(--adelt)}',
+'#annoPop .ap-save{background:var(--aacc);color:#fff;border-color:var(--aacc)}',
+/* 署名列:內嵌在留言視窗裡,不用瀏覽器 prompt(在部分環境會被擋掉,實測 6/6 使用者因此永遠掛「匿名」) */
+'#annoPop .ap-who{display:flex;align-items:center;gap:6px;margin:0 0 7px;font-size:12px;color:var(--amut)}',
+'#annoPop .ap-whoin{flex:1;min-width:0;background:var(--achip);color:var(--atx);border:1px solid var(--aln);border-radius:6px;padding:3px 7px;font:inherit;font-size:12.5px}',
+'#annoPop .ap-whoin:focus{border-color:var(--aacc);outline:none}',
+'#annoPop .ap-who.need .ap-whoin{border-color:var(--adelt);background:var(--adelb)}',
+'#annoPop .ap-who.need .ap-wholab{color:var(--adelt);font-weight:700}',
+'#annoPop .ap-sug{margin:2px 0 8px}',
+'#annoToast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:2147483003;background:var(--as);color:var(--atx);border:1px solid var(--aacc);border-radius:9px;padding:10px 16px;font-size:12.5px;line-height:1.5;box-shadow:0 8px 28px rgba(0,0,0,.35);max-width:min(460px,calc(100vw - 32px));text-align:left}',
+'#annoToast[hidden]{display:none!important}',
+'#annoToast b{color:var(--aacc)}',
+'#annoPop .ap-sugtoggle{font-size:12px;background:none;border:1px dashed var(--aln);color:var(--amut);border-radius:6px;padding:3px 9px;cursor:pointer;width:100%;text-align:left}',
+'#annoPop .ap-sugtoggle:hover{border-color:var(--aacc);color:var(--aacc)}',
+'#annoPop .ap-sugta{width:100%;min-height:48px;resize:vertical;background:var(--achip);color:var(--atx);border:1px solid var(--aacc);border-radius:6px;padding:6px 8px;font:inherit;font-size:13px;box-sizing:border-box}',
+'#annoPop .ap-sugrow{display:flex;gap:6px;justify-content:flex-end;margin-top:6px}',
+'#annoPop .ap-sugrow button{font-size:12px;border-radius:6px;padding:4px 10px;cursor:pointer;border:1px solid var(--aln);background:var(--achip);color:var(--atx)}',
+'#annoPop .ap-sugsave,#annoPop .ap-sugaccept{background:var(--aacc);color:#fff;border-color:var(--aacc)}',
+'#annoPop .ap-sugaccept[disabled]{opacity:.4;cursor:not-allowed}',
+'#annoPop .ap-sugview,#annoPop .ap-sugdone{border:1px solid var(--aln);border-radius:6px;padding:6px 8px;background:var(--achip)}',
+'#annoPop .ap-sugdone{border-color:var(--aacc)}',
+'#annoPop .ap-sugtext{font-size:12.5px;color:var(--atx);margin-bottom:2px;word-break:break-word}',
+/* 建議的新舊對照(複用版本比對的 diff 引擎):刪除線=原文、底線=改成的字。
+   實測會計/大學生都要求「看得出哪幾個字被動了」,不要只丟一整段新字串讓人自己比對 */
+'#annoPop .ap-sugdiff,#annoPop .ap-sugdiff2{font-size:12.5px;line-height:1.7;margin:4px 0 2px;word-break:break-word;white-space:pre-wrap}',
+'#annoPop .ap-sugnote{font-size:11px;color:var(--amut);line-height:1.45;margin:4px 0 0}',
+'#annoPop .ap-donelab{font-size:12px;color:var(--aacc);font-weight:700;margin-bottom:2px}',
+'#annoPop .ap-donemeta{font-size:11px;color:var(--amut);margin-top:3px}',
+'mark.anno.sug{border-bottom:2px solid var(--sugc,#0e7b6c)}',
+'.ap-item.sug .badge{display:inline-block;font-size:10px;color:#0e7b6c;border:1px solid #0e7b6c;border-radius:4px;padding:0 4px;margin-right:4px;vertical-align:1px}',
+'.ap-item .sugline{color:#0e7b6c;font-size:12px;margin-top:2px}',
+'#annoToggle{position:fixed;right:18px;bottom:18px;z-index:2147482999;background:var(--aacc);color:#fff;border:none;border-radius:999px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.3)}',
+'#annoPanel{position:fixed;right:18px;bottom:64px;z-index:2147482999;width:350px;max-height:62vh;display:flex;flex-direction:column;background:var(--as);border:1px solid var(--aln);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.3);font-size:13px;color:var(--atx)}',
+'#annoPanel .ap-head{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:10px 12px;border-bottom:1px solid var(--aln);font-weight:700}',
+'#annoPanel .ap-head .sp{margin-right:auto}',
+'#annoPanel .ap-head button{font-size:12px;background:var(--achip);border:1px solid var(--aln);border-radius:6px;padding:3px 8px;cursor:pointer;color:var(--atx);white-space:nowrap;flex:none}',
+/* min-height:一打開面板就要看得到標註本身,不能被上方的引導條/篩選列擠成一條縫(實測有人以為留言沒存到) */
+'#annoList{overflow-y:auto;padding:6px;flex:1 1 auto;min-height:96px}',
+'#annoList .empty{padding:16px;color:var(--amut);text-align:center}',
+'#annoResize{position:absolute;left:-2px;top:-2px;width:18px;height:18px;cursor:nwse-resize;border-left:3px solid var(--amut);border-top:3px solid var(--amut);border-radius:12px 0 0 0;opacity:.45;z-index:1}',
+'#annoResize:hover{opacity:1;border-color:var(--aacc)}',
+'.ap-item{padding:8px 10px;border-radius:8px;cursor:pointer;border-bottom:1px solid var(--aln)}',
+'.ap-item:last-child{border-bottom:none}',
+'.ap-item:hover{background:var(--achip)}',
+'.ap-item .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;border:1px solid var(--aln)}',
+'.ap-item .q{color:var(--atx)}',
+'.ap-item .n{color:var(--amut);font-size:12px;margin-top:2px;white-space:pre-wrap}',
+'.ap-item.orphan{opacity:.55}',
+'.ap-item.approx .q{color:#b88a2e}',
+'.ap-hint{flex:none;padding:8px 12px;border-top:1px solid var(--aln);color:var(--amut);font-size:11.5px;line-height:1.5}',
+'#annoOnboard{flex:none;display:flex;gap:8px;align-items:flex-start;margin:8px 12px 0;padding:9px 10px;background:var(--achip);border:1px solid var(--aacc);border-radius:9px}',
+'#annoOnboard[hidden]{display:none!important}',
+'#annoOnboard .ob-body{flex:1;font-size:12px;line-height:1.55;color:var(--atx)}',
+'#annoOnboard .ob-body b{color:var(--aacc)}',
+'#annoOnboard .ob-dismiss{flex:none;background:none;border:none;color:var(--amut);font-size:13px;cursor:pointer;padding:0 2px;line-height:1.4}',
+'#annoOnboard .ob-dismiss:hover{color:var(--adelt)}',
+'.ap-filter{flex:none;display:flex;flex-direction:column;gap:7px;padding:8px 12px;border-bottom:1px solid var(--aln)}',
+'.ap-filter input{width:100%;background:var(--achip);color:var(--atx);border:1px solid var(--aln);border-radius:6px;padding:4px 8px;font:inherit;font-size:12px;box-sizing:border-box}',
+'.ap-filter .frow{display:flex;flex-wrap:wrap;gap:5px;align-items:center}',
+'.fchip{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:999px;border:1px solid var(--aln);background:var(--achip);color:var(--atx);font-size:11.5px;cursor:pointer;opacity:.55;white-space:nowrap}',
+'.fchip:hover{opacity:.85}',
+'.fchip.on{opacity:1;border-color:var(--aacc);box-shadow:inset 0 0 0 1px var(--aacc)}',
+'.fchip .cdot{width:10px;height:10px;border-radius:50%;flex:none}',
+'.fchip .cdot.c-y{background:#f2c414}.fchip .cdot.c-r{background:#e4574a}.fchip .cdot.c-g{background:#3cb878}.fchip .cdot.c-b{background:#4a90e2}',
+'.fchip .fclab{max-width:132px;overflow:hidden;text-overflow:ellipsis}',
+'.fchip .foic{font-size:12px;line-height:1}',
+'#annoPop .ap-thread{max-height:190px;overflow-y:auto;margin-bottom:8px}',
+'#annoPop .msg{padding:6px 8px;border-radius:8px;background:var(--amsg);margin-bottom:6px}',
+'#annoPop .msg.sys{background:transparent;border:1px dashed var(--aln);color:var(--amut)}',
+'#annoPop .msg.sys .mt{font-size:12px}',
+'#annoPop .mh{font-size:11px;color:var(--amut);margin-bottom:2px}',
+'#annoPop .mt{white-space:pre-wrap}',
+'#annoPop .ap-res{font-size:12.5px;border-radius:6px;padding:4px 10px;cursor:pointer;border:1px solid var(--aln);background:var(--achip);color:var(--atx)}',
+'mark.anno.res{opacity:.45}',
+'.ap-item.resolved{opacity:.55}',
+'.ap-item.resolved .q{text-decoration:line-through}',
+'.annoPrintNo{font-size:9px;color:#555}',
+'#annoPrintApp{display:none}',
+'#annoStaticApp{margin:40px 12px 20px;padding:14px 18px;border:1px solid var(--aln);border-radius:12px;background:var(--as);color:var(--atx);font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;font-size:13px;line-height:1.75}',
+'#annoStaticApp h2{font-size:16px;margin:0 0 4px}',
+'#annoStaticApp .hint{color:var(--amut);font-size:11.5px;margin-bottom:10px}',
+'#annoStaticApp .sa{border-top:1px solid var(--aln);padding:8px 0}',
+'#annoStaticApp .sa.ok{opacity:.6}',
+'#annoStaticApp blockquote{margin:4px 0;padding:3px 10px;border-left:3px solid var(--aln);color:var(--amut);font-size:12.5px}',
+'#annoStaticApp .m{margin:2px 0 2px 14px;white-space:pre-wrap}',
+'#annoStaticApp .m b{color:var(--amut);font-weight:400;font-size:11.5px}',
+'@media print{#annoStaticApp{display:none!important}}',
+'@media print{#annoBar,#annoPop,#annoPanel,#annoToggle{display:none!important}#annoPrintApp{display:block;page-break-before:always}}',
+'@media (pointer: coarse){#annoBar{gap:8px;padding:8px 10px}#annoBar button{padding:6px 12px;font-size:14px}#annoPop{width:min(300px,calc(100vw - 24px))}#annoPanel{width:min(350px,calc(100vw - 24px))}}',
+'.anno-modal-ov{position:fixed;inset:0;z-index:2147483002;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px}',
+'.anno-modal-ov[hidden]{display:none!important}',
+'.anno-modal-bx{background:var(--as);color:var(--atx);border:1px solid var(--aln);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.45);width:min(680px,100%);max-height:86vh;display:flex;flex-direction:column;overflow:hidden}',
+'.anno-modal-bx .pm-head{display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--aln)}',
+'.anno-modal-bx .pm-head b{font-size:14px}',
+'.anno-modal-bx .pm-x{margin-left:auto;background:none;border:none;color:var(--amut);font-size:14px;cursor:pointer;padding:4px 8px;line-height:1}',
+'.anno-modal-bx .pm-x:hover{color:var(--adelt)}',
+'.anno-modal-bx .pm-hint{padding:10px 16px 0;color:var(--amut);font-size:12px;line-height:1.5}',
+'#annoPromptBox textarea{flex:1;margin:12px 16px;min-height:240px;resize:none;background:var(--achip);color:var(--atx);border:1px solid var(--aln);border-radius:8px;padding:12px;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12px;line-height:1.55;white-space:pre;overflow:auto}',
+'.anno-modal-bx .pm-foot{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--aln);align-items:center}',
+'.anno-modal-bx .pm-foot .pm-note{color:var(--amut);font-size:12px}',
+'.anno-modal-bx .pm-foot .sp{margin-left:auto}',
+'.anno-modal-bx .pm-foot button{font-size:13px;border-radius:7px;padding:8px 15px;cursor:pointer;border:1px solid var(--aln);background:var(--achip);color:var(--atx)}',
+'.anno-modal-bx .pm-foot button:hover{border-color:var(--aacc)}',
+'.anno-modal-bx .pm-foot button.pm-copy{background:var(--aacc);color:#fff;border-color:var(--aacc)}',
+'.dv-stats{padding:8px 16px 0;font-size:12px;color:var(--amut)}',
+'.dv-stats .dv-add{color:#3cb878;font-weight:700}',
+'.dv-stats .dv-rem{color:#e4574a;font-weight:700}',
+'.dv-body{flex:1;margin:10px 16px;padding:12px 14px;overflow:auto;background:var(--achip);border:1px solid var(--aln);border-radius:8px;font-size:13px;line-height:1.75;white-space:pre-wrap;word-break:break-word}',
+'.dv-del{background:rgba(228,87,74,.2);text-decoration:line-through;text-decoration-color:rgba(228,87,74,.7)}',
+'.dv-ins{background:rgba(60,184,120,.22);text-decoration:underline;text-decoration-color:rgba(60,184,120,.8)}',
+'.dv-empty{padding:30px 16px;text-align:center;color:var(--amut);font-size:13px}',
+'.anno-menu{position:fixed;right:18px;bottom:64px;z-index:2147483000;background:var(--as);border:1px solid var(--aln);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.32);padding:6px;width:min(268px,calc(100vw - 24px))}',
+'.anno-menu[hidden]{display:none!important}',
+'.anno-menu .lm-title{font-size:11px;color:var(--amut);padding:5px 8px 6px}',
+'.anno-menu button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--atx);font:inherit;font-size:13px;padding:7px 9px;border-radius:7px;cursor:pointer}',
+'.anno-menu button:hover{background:var(--achip)}',
+'.anno-menu button.sel{color:var(--aacc);font-weight:700}',
+'.anno-menu button.sel::before{content:"✓ "}',
+'.anno-menu .lm-sub{display:block;font-size:11px;color:var(--amut);font-weight:400;margin-top:2px;line-height:1.4}',
+'#annoLegendCustom{border-top:1px solid var(--aln)!important;border-radius:0 0 7px 7px!important;margin-top:2px;color:var(--amut)}'
+].join('\n');
+
+/* 介面文字全部留空,由引擎的 applyI18n() 依語言填入(標註存中文或英文環境都能開) */
+var ENGINE_UI =
+'<div id="annoBar" hidden>'+
+'<button class="c-y" data-c="y"><i class="bdot c-y"></i><span class="blab"></span></button>'+
+'<button class="c-r" data-c="r"><i class="bdot c-r"></i><span class="blab"></span></button>'+
+'<button class="c-g" data-c="g"><i class="bdot c-g"></i><span class="blab"></span></button>'+
+'<button class="c-b" data-c="b"><i class="bdot c-b"></i><span class="blab"></span></button>'+
+'</div>'+
+'<div id="annoPop" hidden>'+
+'<div class="ap-drag"><span class="ap-draglab"></span><button class="ap-close">✕</button></div>'+
+'<div class="ap-quote"></div>'+
+'<div class="ap-who"><span class="ap-wholab"></span><input class="ap-whoin" type="text" maxlength="24"></div>'+
+'<div class="ap-sug">'+
+'<button class="ap-sugtoggle"></button>'+
+'<div class="ap-sugedit" hidden><textarea class="ap-sugta"></textarea><div class="ap-sugrow"><button class="ap-sugcancel"></button><button class="ap-sugsave"></button></div></div>'+
+'<div class="ap-sugview" hidden><div class="ap-sugtext"></div><div class="ap-sugdiff"></div><div class="ap-sugnote"></div><div class="ap-sugrow"><button class="ap-sugremove"></button><button class="ap-sugaccept"></button></div></div>'+
+'<div class="ap-sugdone" hidden><div class="ap-donelab"></div><div class="ap-sugdiff2"></div><div class="ap-donemeta"></div><div class="ap-sugrow"><button class="ap-sugundo"></button></div></div>'+
+'</div>'+
+'<div class="ap-thread"></div>'+
+'<textarea class="ap-cta"></textarea>'+
+'<div class="ap-row"><span class="ap-colors">'+
+'<button class="c-y" data-c="y"><i class="bdot c-y"></i><span class="blab"></span></button>'+
+'<button class="c-r" data-c="r"><i class="bdot c-r"></i><span class="blab"></span></button>'+
+'<button class="c-g" data-c="g"><i class="bdot c-g"></i><span class="blab"></span></button>'+
+'<button class="c-b" data-c="b"><i class="bdot c-b"></i><span class="blab"></span></button>'+
+'</span><button class="ap-res"></button><button class="ap-del"></button><button class="ap-save"></button></div>'+
+'</div>'+
+'<button id="annoToggle">🖍 <span id="annoTogLab"></span> <span id="annoCount">0</span></button>'+
+'<div id="annoToast" hidden></div>'+
+'<div id="annoPanel" hidden>'+
+'<div id="annoResize"></div>'+
+'<div class="ap-head"><span id="annoPanTitle"></span><span class="sp"></span>'+
+'<button id="annoAuthor"></button>'+
+'<button id="annoLang"></button>'+
+'<button id="annoDown"></button>'+
+'<button id="annoExport"></button>'+
+'<button id="annoPrompt"></button>'+
+'<button id="annoLegend"></button>'+
+'<button id="annoEdit"></button>'+
+'<button id="annoClear"></button></div>'+
+'<div id="annoOnboard" hidden><div class="ob-body"></div><button class="ob-dismiss"></button></div>'+
+'<div class="ap-filter">'+
+'<input id="annoSearch" type="search">'+
+'<div class="frow">'+
+'<button class="fchip fcolor" data-c="y"><i class="cdot c-y"></i><span class="fclab"></span></button>'+
+'<button class="fchip fcolor" data-c="r"><i class="cdot c-r"></i><span class="fclab"></span></button>'+
+'<button class="fchip fcolor" data-c="g"><i class="cdot c-g"></i><span class="fclab"></span></button>'+
+'<button class="fchip fcolor" data-c="b"><i class="cdot c-b"></i><span class="fclab"></span></button>'+
+'<button id="annoFOpen" class="fchip"><span class="foic">○</span><span class="folab"></span></button>'+
+'</div>'+
+'</div>'+
+'<div id="annoList"></div>'+
+'<div class="ap-hint"></div>'+
+'</div>'+
+'<div id="annoPromptOverlay" class="anno-modal-ov" hidden><div id="annoPromptBox" class="anno-modal-bx">'+
+'<div class="pm-head"><b class="pm-title"></b><button class="pm-x">✕</button></div>'+
+'<div class="pm-hint"></div>'+
+'<textarea readonly></textarea>'+
+'<div class="pm-foot"><span class="pm-note"></span><span class="sp"></span><button class="pm-full"></button><button class="pm-dl"></button><button class="pm-copy"></button></div>'+
+'</div></div>'+
+'<div id="annoDiffOverlay" class="anno-modal-ov" hidden><div id="annoDiffBox" class="anno-modal-bx">'+
+'<div class="pm-head"><b class="pm-title"></b><button class="pm-x">✕</button></div>'+
+'<div class="pm-hint"></div>'+
+'<div class="dv-stats"></div>'+
+'<div class="dv-body"></div>'+
+'<div class="pm-foot"><span class="pm-note"></span><span class="sp"></span><button class="dv-update"></button><button class="pm-x2"></button></div>'+
+'</div></div>'+
+'<div id="annoLegendMenu" class="anno-menu" hidden>'+
+'<div class="lm-title"></div>'+
+'<button data-preset="general"><span class="lm-name"></span><span class="lm-sub"></span></button>'+
+'<button data-preset="ai"><span class="lm-name"></span><span class="lm-sub"></span></button>'+
+'<button id="annoLegendCustom"></button>'+
+'</div>'+
+'<div id="annoExportMenu" class="anno-menu" hidden>'+
+'<div class="lm-title"></div>'+
+'<button data-export="print"><span class="lm-name"></span><span class="lm-sub"></span></button>'+
+'<button data-export="report"><span class="lm-name"></span><span class="lm-sub"></span></button>'+
+'<button data-export="md"><span class="lm-name"></span><span class="lm-sub"></span></button>'+
+'<button data-export="json"><span class="lm-name"></span><span class="lm-sub"></span></button>'+
+'</div>'+
+'<div id="annoAiMenu" class="anno-menu" hidden>'+
+'<div class="lm-title"></div>'+
+'<button data-ai="prompt"><span class="lm-name"></span><span class="lm-sub"></span></button>'+
+'<button data-ai="diff"><span class="lm-name"></span><span class="lm-sub"></span></button>'+
+'</div>';
+
+function ENGINE(){
+var KEY = window.__ANNO_KEY || 'anno::standalone::' + (document.title || 'doc');
+var NAME = window.__ANNO_NAME || document.title || 'document';
+var UI = '#annoBar,#annoPop,#annoPanel,#annoToggle,#annoPromptOverlay,#annoDiffOverlay,#annoLegendMenu,#annoExportMenu,#annoAiMenu,#annoToast';
+/* ---- 雙語字典:跟著 ENGINE.toString() 進含標記版,收件人依自己的偏好/瀏覽器語言顯示 ---- */
+var I18N = {
+ zh: {
+  dl:'zh-TW', hl:'zh-Hant', sep:'：',
+  legend:{ y:'重點', r:'有問題', g:'已確認', b:'補充說明' },
+  cn:{ y:'黃', r:'紅', g:'綠', b:'藍' },
+  only:'只看', open:'未解決', openTitle:'只看還沒解決的',
+  drag:'⠿ 可拖曳', dragTitle:'按住這裡拖曳移動視窗', close:'關閉',
+  ph:'輸入註解或回覆…', resolve:'✓ 解決', reopen:'↩ 重新開啟', del:'刪除', send:'送出',
+  tog:'標註', resizeTitle:'拖曳調整大小', panel:'標註清單',
+  authorBtn:'👤 名稱', langBtn:'🌐 EN', legendBtn:'🎨 顏色',
+  authorTitle:'設定你的顯示名稱(會出現在你的留言旁邊)',
+  down:'⬇ 含標記版', downTitle:'把文件和你的所有標記打包成一個檔,對方直接打開就能看、能回覆',
+  report:'📄 報告', reportTitle:'產出一頁式標註摘要,適合貼進會議紀錄',
+  legendTitle:'選擇或自訂四色螢光筆各代表什麼意思',
+  edit:'✏️ 直接改字', editDone:'✔ 完成修改', editTitle:'我自己直接改文件的文字，按下去就立即生效，不用等任何人同意、也不會留下標註 — 適合修錯字。要跟別人討論、或要交給 AI 去改的內容，請改用標記裡的「💡 提議改成…」',
+  tipExport:'把標註匯出成報告、清單或資料檔', tipPrompt:'AI 修改相關功能：產生修改指令、或比較這一輪改了什麼',
+  aiMenuTitle:'AI 修改', aiPromptName:'🤖 產生修改指令', aiPromptSub:'把標註整理成指令,貼給 AI 修改文件',
+  aiDiffName:'🔍 比較版本', aiDiffSub:'看跟上次「產生修改指令」比,文件改了哪裡',
+  dvTitle:'版本比對', dvHint:'跟上次的基準版本比較（{d}）— 紅色刪除線是舊文字，綠色底線是新文字',
+  dvNoChange:'目前版本跟基準版本一樣,還沒有變化。', dvUpdate:'✓ 更新基準為目前版本',
+  sugToggleTitle:'像 Word 的「建議修訂」— 你提出這段該改成什麼，但文件不會馬上被改；對方（或你自己）可以接受或拒絕，也能交給 AI 照著改',
+  obBody:'<b>快速上手：</b>選取文字 → 挑顏色 → 可寫留言,就是核心用法。下面這些是進階功能,需要時再用：📤匯出、🤖修改指令、💡 提議改成…(提議精確的替代文字,可接受/拒絕)。✏️ 直接改字 則是直接改字、立即生效,適合快速修錯字。',
+  obDismiss:'知道了',
+  tipClear:'刪除這份文件的全部標註', tipToggle:'打開或收起所有標註的清單',
+  tipRes:'把這則標註標記為已處理', tipDel:'刪除這則標註和它的所有留言', tipSave:'送出這則留言',
+  clear:'🗑 清空', searchPh:'搜尋標註…',
+  hint:'選取文字即可新增標註；點標註可回覆/改顏色/✓解決/刪除。標記存在此瀏覽器；要傳給同事或換電腦，按「⬇ 含標記版」打包帶走。',
+  noStorage:'⚠ 此瀏覽器無法自動儲存標註（localStorage 被封鎖）— 離開前請務必按「⬇ 含標記版」保存,下次直接開啟那個檔案。',
+  anon:'匿名',
+  namePrompt:'你的名字（會顯示在你的註解上，可留空）',
+  nameChange:'顯示名稱（會出現在你的註解上）',
+  emptyList:'還沒有標註 — 選取文件裡的文字即可開始',
+  emptyFilter:'沒有符合篩選條件的標註',
+  orphan:'⚠ 這段原文已被改動，標記接不回去（留言都還在）：',
+  orphanHint:'這通常是因為文件這段文字被編輯或被 AI 改寫過，所以標記找不到原本的位置。你的留言與這則標註都完整保留、也會照樣傳給對方；想重新標的話，選取新的文字再標一次即可。',
+  approxMark:'≈ ', approxHint:'位置為近似 — 原文已被修改,系統依前後文與相似度重新定位,請確認標的是否正確',
+  whoLab:'你是', whoPh:'填你的名字(會顯示在留言上)',
+  needName:'請先在上面填你的名字,留言才看得出是誰寫的。',
+  nameNoAnno:'先在文件上標一段文字,就能在留言視窗填你的名字。',
+  savedToast:'✓ 已存到「下載」資料夾:{f}({s})',
+  sugToggle:'💡 提議改成…（不會馬上生效，要對方同意）', sugSave:'儲存提議', sugCancel:'取消', sugAccept:'✓ 接受(套用)', sugRemove:'移除提議',
+  sugFulfilledLab:'✓ 已經照你的提議改好了：',
+  sugFulfilledNote:'文件現在這段已經等於你提議的文字（通常是 AI 照著修改指令改好，或別人先改了），不用再按接受。確認對了就可以收掉這則提議。',
+  sugFulfilledDone:'✓ 確認對了，收掉提議',
+  sugAcceptNote:'按「接受」會直接把文件這段換成你提議的文字。原文會留在下方留言紀錄裡,隨時可以還原。',
+  sugAppliedLab:'✓ 已套用這個修改', sugUndo:'↩ 還原成原文',
+  sugAppliedLog:'✓ 套用提議的修改:「{from}」→「{to}」',
+  sugRevertLog:'↩ 還原修改:「{from}」→「{to}」',
+  sugAppliedToast:'✓ 已套用。原文「{from}」已記錄在留言裡,可按「↩ 還原成原文」復原。',
+  sugRevertToast:'↩ 已還原成原文,提議退回未套用狀態。',
+  legendSwitched:'已切換四色意義。你原有的 {n} 筆標註會保留當初的分類不變,只有之後新標的才用新意義。',
+  pmFull:'含文件全文', pmFullTitle:'把整份文件的文字附在指令後面,這樣整段貼給 AI 就能用,不必另外附上原始檔案',
+  pmFullHead:'--- 以下是文件全文(供你定位與修改) ---',
+  pmCopiedToast:'✓ 已複製到剪貼簿,可以直接貼給 Claude／GPT／Cursor 了。',
+  pmHintFull:'已附上文件全文 —— 直接把這整段貼給 Claude／GPT／Cursor 即可,不必再另外傳原始檔案。',
+  sugPh:'輸入你認為這段該改成什麼…', sugLabel:'提議改成', sugBadge:'💡 提議', sugOrphan:'找不到原文位置,無法直接套用',
+  sugRule:'\n- 標有「提議改成」的項目,請將該標記文字精確替換為提議的文字(照抄,不要改寫)。',
+  openCount:'{t} · {o} 未解決',
+  more:'（共 {n} 則）',
+  confirmClear:'確定刪除全部 {n} 筆標註？',
+  legendPrompt:'自訂四色的意義（格式:黃=重點, 紅=有問題, 綠=已確認, 藍=補充說明）',
+  printTitle:'📝 標註註解', resolvedParen:'（已解決）',
+  staticTitle:'📝 標註對照表',
+  staticHint:'共 {n} 筆標註。此表為靜態預覽（手機/預覽視窗適用）；要回覆或新增標記，請用瀏覽器（Chrome/Edge/Safari）開啟本檔。',
+  resolvedMark:'（✓已解決）',
+  repTitle:'{name} 標註報告', repH1:'📋 標註報告',
+  repMeta:'{name} · 產出於 {d} · 共 {n} 筆標註,未解決 {o} 筆',
+  repNone:'（沒有標註）', stRes:'✓ 已解決', stOpen:'● 未解決',
+  sfxAnno:'_標記版', sfxRep:'_標註報告',
+  sfxAnnoNote:'<br>檔案比原稿大是正常的 —— 標註工具一起包進去了,對方不用安裝任何東西,直接用瀏覽器打開就能看標記、也能回覆。標完傳回來給你,兩邊的留言會自動合併。',
+  langTitle:'Switch to English',
+  pmBtn:'🤖 修改指令', pmTitle:'AI 修改指令',
+  lmTitle:'這份文件的四色代表', presetGeneral:'一般審閱', presetAI:'AI 報告審閱', presetCustom:'自訂…',
+  aiLegend:{ y:'缺來源／待查證', r:'事實錯誤／幻覺', g:'已查證', b:'語氣／冗長／格式' },
+  exBtn:'📤 匯出', exTitle:'匯出標註',
+  exPrint:'🖨 列印／存成 PDF', exPrintSub:'整份文件加上標記編號，文末附上註解對照表',
+  printToast:'已打開列印視窗 — 在「目的地」或「印表機」選「另存為 PDF」就能存成 PDF 檔。標記處會自動加編號，文末附上所有註解。',
+  exReport:'📄 一頁標註清單', exReportSub:'只有標註跟留言（不含文件），適合貼進會議紀錄',
+  exMd:'⬇ Markdown', exMdSub:'純文字待辦清單，給專案工具用（不用的人可以忽略）',
+  exJson:'⟨⟩ JSON', exJsonSub:'給程式或 AI 讀的資料檔（不用的人可以忽略）',
+  exSfx:'_標註', mdTitle:'標註', mdMeta:'共 {n} 筆,未解決 {o} 筆 · 匯出於 {d}',
+  pmHint:'把未解決的標註整理成一段指令,貼回 Claude／GPT／Cursor 讓它改文件。<b>記得連同你的 HTML 檔一起給 AI</b>,或按下方「含文件全文」把全文附進來。',
+  pmCount:'{n} 則未解決標註', pmCopy:'複製', pmCopied:'已複製 ✓', pmDl:'下載 .md',
+  pmEmpty:'目前沒有未解決的標註可以產生指令。', pmSfx:'_修改指令',
+  pmIntro:'你正在依據人工審閱者的標註,修改一份 HTML 文件。\n\n文件:「{name}」\n以下是 {n} 則審閱意見。每則標出被標記的原文、其前後脈絡(以 …前文〖標記文字〗後文… 呈現)、分類,以及審閱者的留言。\n',
+  pmNoteWord:'意見', pmLblMarked:'標記文字', pmLblContext:'脈絡', pmLblComments:'留言',
+  pmNoComments:'(無留言 — 標記為「{cat}」)',
+  pmOutro:'\n指示:\n- 逐一處理上述每則意見,「有問題」與留言中的要求視為必須修改的項目。\n- 以引用的原文與脈絡定位段落,其餘內容維持不變。\n- 保留文件既有的 HTML 結構、樣式與排版。\n- 回傳完整的修改後 HTML 文件。'
+ },
+ en: {
+  dl:'en-US', hl:'en', sep:': ',
+  legend:{ y:'Key point', r:'Issue', g:'Confirmed', b:'Note' },
+  cn:{ y:'Yellow', r:'Red', g:'Green', b:'Blue' },
+  only:'Show only ', open:'Open', openTitle:'Show unresolved only',
+  drag:'⠿ Drag', dragTitle:'Hold here to move this popup', close:'Close',
+  ph:'Write a comment or reply…', resolve:'✓ Resolve', reopen:'↩ Reopen', del:'Delete', send:'Send',
+  tog:'Notes', resizeTitle:'Drag to resize', panel:'Annotations',
+  authorBtn:'👤 Name', langBtn:'🌐 中文', legendBtn:'🎨 Colors',
+  authorTitle:'Set your display name (shown next to your comments)',
+  down:'⬇ Annotated copy', downTitle:'Package the document with all your marks into one file — the recipient just opens it to read and reply',
+  report:'📄 Report', reportTitle:'Export a one-page summary, ready to paste into meeting notes',
+  legendTitle:'Choose or customize what the four highlight colors mean',
+  edit:'✏️ Edit directly', editDone:'✔ Done editing', editTitle:'Edit the document text directly (takes effect immediately, no annotation created) — good for quickly fixing typos. To propose a specific change to one passage that can be discussed or fed to an AI, use "✎ Suggest an edit" on that mark instead',
+  sugToggleTitle:'Like Word\u2019s suggested edits — you propose what this passage should say, but the document is not changed yet; the other person (or you) can accept or reject it, and an AI can apply it verbatim',
+  obBody:'<b>Quick start:</b> select text → pick a color → optionally write a comment — that\'s the core workflow. Everything below is optional, for when you need it: 📤 export, 🤖 revision prompt, ✎ suggest an edit (propose exact replacement text, accept or reject later). ✏️ Edit changes the text directly and takes effect immediately — good for quick typo fixes.',
+  obDismiss:'Got it',
+  tipExport:'Export your annotations as a report, checklist, or data file', tipPrompt:'AI revision tools: generate a revision prompt, or compare what changed this round',
+  aiMenuTitle:'AI revision', aiPromptName:'🤖 Generate revision prompt', aiPromptSub:'Turn annotations into an instruction for the AI',
+  aiDiffName:'🔍 Compare versions', aiDiffSub:'See what changed since the last "Generate revision prompt"',
+  dvTitle:'Version comparison', dvHint:'Compared with the last baseline ({d}) — strikethrough red is old text, underlined green is new text',
+  dvNoChange:'The current version matches the baseline — nothing has changed yet.', dvUpdate:'✓ Update baseline to current version',
+  tipClear:'Delete every annotation in this document', tipToggle:'Show or hide the list of all annotations',
+  tipRes:'Mark this note as handled', tipDel:'Delete this note and all its comments', tipSave:'Post this comment',
+  clear:'🗑 Clear', searchPh:'Search annotations…',
+  hint:'Select text to annotate. Click a highlight to reply, recolor, ✓ resolve, or delete. Annotations live in this browser — to hand off or switch computers, use “⬇ Annotated copy”.',
+  noStorage:'⚠ This browser cannot save annotations automatically (localStorage is blocked) — click “⬇ Annotated copy” before leaving and open that file next time.',
+  anon:'Anonymous',
+  namePrompt:'Your name (shown on your comments, may be left blank)',
+  nameChange:'Display name (shown on your comments)',
+  emptyList:'No annotations yet — select some text in the document to start',
+  emptyFilter:'No annotations match the current filter',
+  orphan:'⚠ This passage was edited, so the highlight lost its anchor (your comments are safe): ',
+  orphanHint:'This usually means the text was edited — by you or by an AI — so the highlight can no longer find its original spot. Your comments and this annotation are fully preserved and still travel with the file; to re-anchor it, just select the new text and mark it again.',
+  approxMark:'≈ ', approxHint:'Approximate location — the original text was edited; re-anchored by context and similarity. Please verify the target.',
+  whoLab:'You are', whoPh:'your name (shown on your comments)',
+  needName:'Enter your name above first, so people can tell who wrote this.',
+  nameNoAnno:'Highlight some text in the document first — then you can set your name in the comment popup.',
+  savedToast:'✓ Saved to your Downloads folder: {f} ({s})',
+  sugToggle:'💡 Suggest a change… (needs approval — nothing changes yet)', sugSave:'Save suggestion', sugCancel:'Cancel', sugAccept:'✓ Accept (apply)', sugRemove:'Remove suggestion',
+  sugFulfilledLab:'✓ Already changed as you suggested:',
+  sugFulfilledNote:'This passage now matches your suggested text — usually because an AI followed the revision prompt, or someone else got there first — so there is nothing to accept. If it looks right, you can clear the suggestion.',
+  sugFulfilledDone:'✓ Looks right — clear it',
+  sugAcceptNote:'“Accept” replaces this passage in the document with the suggested text. The original is kept in the comment log below and can be restored at any time.',
+  sugAppliedLab:'✓ This change has been applied', sugUndo:'↩ Restore original',
+  sugAppliedLog:'✓ Applied suggestion: "{from}" → "{to}"',
+  sugRevertLog:'↩ Reverted change: "{from}" → "{to}"',
+  sugAppliedToast:'✓ Applied. The original "{from}" is recorded in the comments — press “↩ Restore original” to undo.',
+  sugRevertToast:'↩ Restored the original text; the suggestion is pending again.',
+  legendSwitched:'Color meanings switched. Your existing {n} annotation(s) keep the category they were created with — only new ones use the new meanings.',
+  pmFull:'Include full document', pmFullTitle:'Append the document\'s full text to the prompt, so pasting this one block into an AI is enough — no need to attach the original file',
+  pmFullHead:'--- Full document text (for locating and editing) ---',
+  pmCopiedToast:'✓ Copied to clipboard — paste it straight into Claude / GPT / Cursor.',
+  pmHintFull:'Full document text is attached — just paste this whole block into Claude / GPT / Cursor; no need to send the original file separately.',
+  sugPh:'Enter the proposed new text…', sugLabel:'Suggested change', sugBadge:'💡 Suggestion', sugOrphan:'Original text not found — cannot apply directly',
+  sugRule:'\n- For any note with a suggested change, replace the marked text with it exactly (verbatim, do not paraphrase).',
+  openCount:'{t} · {o} open',
+  more:' ({n} messages)',
+  confirmClear:'Delete all {n} annotations?',
+  legendPrompt:'Customize the four colors (format: y=Key point, r=Issue, g=Confirmed, b=Note)',
+  printTitle:'📝 Annotations', resolvedParen:' (resolved)',
+  staticTitle:'📝 Annotation table',
+  staticHint:'{n} annotations total. This is a static preview (for phones / preview windows); to reply or add annotations, open this file in a browser (Chrome/Edge/Safari).',
+  resolvedMark:' (✓ resolved)',
+  repTitle:'{name} — Annotation report', repH1:'📋 Annotation report',
+  repMeta:'{name} · Generated {d} · {n} annotations, {o} open',
+  repNone:'(no annotations)', stRes:'✓ Resolved', stOpen:'● Open',
+  sfxAnno:'_annotated', sfxRep:'_report',
+  sfxAnnoNote:'<br>The file is bigger than your original — that is expected: the annotation tool is packaged inside, so the recipient installs nothing and just opens it in a browser to read and reply. When they send it back, both sides\' comments merge automatically.',
+  langTitle:'切換為中文',
+  pmBtn:'🤖 Revision prompt', pmTitle:'Revision prompt for the AI',
+  lmTitle:'What the four colors mean', presetGeneral:'General review', presetAI:'AI report review', presetCustom:'Custom…',
+  aiLegend:{ y:'Unsourced / verify', r:'Fact error / hallucination', g:'Verified', b:'Tone / verbosity / format' },
+  exBtn:'📤 Export', exTitle:'Export annotations',
+  exPrint:'🖨 Print / Save as PDF', exPrintSub:'The whole document with numbered highlights and a comment table at the end',
+  printToast:'Print dialog opened — choose “Save as PDF” as the destination to get a PDF file. Highlights are numbered automatically and all comments are appended at the end.',
+  exReport:'📄 One-page annotation list', exReportSub:'Just the annotations and comments (not the document) — for meeting notes',
+  exMd:'⬇ Markdown', exMdSub:'Plain-text checklist for project tools (ignore if you do not use them)',
+  exJson:'⟨⟩ JSON', exJsonSub:'Data file for scripts or AI (ignore if you do not use them)',
+  exSfx:'_annotations', mdTitle:'Annotations', mdMeta:'{n} total, {o} open · exported {d}',
+  pmHint:'Turns your open annotations into one instruction to paste back to Claude / GPT / Cursor. <b>Remember to give the AI your HTML file too</b> — or use “Include full document” below to append the text here.',
+  pmCount:'{n} open annotation(s)', pmCopy:'Copy', pmCopied:'Copied ✓', pmDl:'Download .md',
+  pmEmpty:'No open annotations to turn into a prompt.', pmSfx:'_prompt',
+  pmIntro:'You are revising an HTML document based on a human reviewer\'s annotations.\n\nDocument: "{name}"\nBelow are {n} review note(s). Each gives the exact marked text, its surrounding context (shown as …before〖MARKED〗after…), a category, and the reviewer\'s comments.\n',
+  pmNoteWord:'Note', pmLblMarked:'Marked text', pmLblContext:'Context', pmLblComments:'Comments',
+  pmNoComments:'(no comment — flagged as "{cat}")',
+  pmOutro:'\nInstructions:\n- Address every note above; treat "Issue" and any comment requests as required changes.\n- Locate each passage by its quoted text and context; leave everything else unchanged.\n- Preserve the document\'s existing HTML structure, styling and formatting.\n- Return the complete revised HTML document.'
+ }
+};
+function F(s, v){ return s.replace(/\{(\w+)\}/g, function(_, k){ return v[k]; }); }
+function annoLang(){
+  var l = null; try{ l = localStorage.getItem('annoReader::lang'); }catch(e){}
+  if(l === 'zh' || l === 'en') return l;
+  return ((navigator.language || '').toLowerCase().indexOf('zh') === 0) ? 'zh' : 'en'; }
+var L = annoLang(), T = I18N[L];
+var annos = [], storageOK = true;
+try{ var raw = localStorage.getItem(KEY); if(raw) annos = JSON.parse(raw) || []; }catch(e){ storageOK = false; }
+function save(){ if(!storageOK) return; try{ localStorage.setItem(KEY, JSON.stringify(annos)); }catch(e){ storageOK = false; } }
+function uid(){ return 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function byId(id){ return annos.filter(function(x){ return x.id === id; })[0]; }
+var editing = false; /* 編輯模式:直接修改文件文字 */
+/* 舊格式(單一 note)升級為對話串 */
+function migrate(a){
+  if(!a.thread){ a.thread = []; if(a.note){ a.thread.push({ id: 'm0' + a.id, author: a.author || '', text: a.note, ts: a.ts || 0 }); } delete a.note; }
+  if(a.resolved === undefined) a.resolved = false;
+  return a; }
+annos.forEach(migrate);
+/* 刪除紀錄(墓碑):避免已刪的標註在重開含標記版時又跑回來 */
+function tombs(){ try{ return JSON.parse(localStorage.getItem(KEY + '::del') || '[]'); }catch(e){ return []; } }
+function addTombs(ids){ try{ var t = tombs(); ids.forEach(function(i){ if(t.indexOf(i) < 0) t.push(i); }); localStorage.setItem(KEY + '::del', JSON.stringify(t)); }catch(e){} }
+/* 合併外來標記:同一條標註的留言逐則合併,誰的話都不會被蓋掉 */
+function mergeIn(arr, ignoreTombs){
+  if(arr && !Array.isArray(arr)) arr = Array.isArray(arr.annotations) ? arr.annotations : null;
+  if(!Array.isArray(arr)) return;
+  var dead = {}; if(!ignoreTombs) tombs().forEach(function(i){ dead[i] = 1; });
+  var map = {}; annos.forEach(function(a){ map[a.id] = a; });
+  arr.forEach(function(inc){
+    if(!inc || inc.quote == null || dead[inc.id]) return;
+    migrate(inc);
+    var cur = map[inc.id];
+    if(!cur){ annos.push(inc); map[inc.id] = inc; return; }
+    var mids = {}; cur.thread.forEach(function(m){ mids[m.id] = 1; });
+    inc.thread.forEach(function(m){ if(m && !mids[m.id]) cur.thread.push(m); });
+    cur.thread.sort(function(a,b){ return (a.ts || 0) - (b.ts || 0); });
+    cur.resolved = cur.resolved || !!inc.resolved;
+    if(inc.suggestion && !cur.suggestion) cur.suggestion = inc.suggestion; }); }
+/* 含標記版檔案:把內嵌的標記資料併入(v2 格式含圖例) */
+var pre = document.getElementById('annoPreset'), presetLegend = null;
+if(pre){ try{
+  var pj = JSON.parse(pre.textContent);
+  if(pj && !Array.isArray(pj) && pj.legend) presetLegend = pj.legend;
+  mergeIn(pj);
+}catch(e){} }
+/* 四色意義:本機自訂 > 檔案內帶的 > 語言預設(換語言時只有預設會跟著換) */
+function localLegend(){ try{ var l = JSON.parse(localStorage.getItem('annoReader::legend') || 'null'); return (l && l.y) ? l : null; }catch(e){ return null; } }
+var customLegend = localLegend();
+var legendMode = null; try{ legendMode = localStorage.getItem('annoReader::legendPreset'); }catch(e){}
+if(legendMode !== 'general' && legendMode !== 'ai' && legendMode !== 'custom') legendMode = customLegend ? 'custom' : null;
+function copyLeg(o){ return { y:o.y, r:o.r, g:o.g, b:o.b }; }
+/* 一則標註的分類文字:優先用建立當下的快照,沒有(舊資料)才回退到目前圖例 */
+function annoLabel(a){ return a.label || LEGEND[a.color]; }
+/* 四色意義解析:使用者明確選的預設 > 檔案內帶的 > 語言預設 */
+function resolveLegend(){
+  if(legendMode === 'ai') return copyLeg(T.aiLegend);
+  if(legendMode === 'general') return copyLeg(T.legend);
+  if(legendMode === 'custom' && customLegend) return copyLeg(customLegend);
+  if(presetLegend) return copyLeg(presetLegend);
+  return copyLeg(T.legend); }
+var LEGEND = resolveLegend();
+function fillLegend(){ ['y','r','g','b'].forEach(function(c){ if(!LEGEND[c]) LEGEND[c] = T.legend[c]; }); }
+fillLegend();
+function applyLegendMode(){ LEGEND = resolveLegend(); fillLegend(); applyLegend(); } /* 換預設/換語言時重刷 */
+/* 署名:一律由畫面內嵌欄位維護。舊版用 prompt(),在部分環境(sandbox/file://)會被瀏覽器擋掉且回傳 null,
+   結果存入空字串後「永遠不再詢問」→ 所有留言永久掛「匿名」且無從發現。實測 6/6 使用者踩到,已改掉。 */
+function getAuthor(){
+  var n = ''; try{ n = localStorage.getItem('annoReader::author') || ''; }catch(e){}
+  return n.trim(); }
+function setAuthor(v){ try{ localStorage.setItem('annoReader::author', (v || '').trim()); }catch(e){} }
+/* 畫面內提示條:下載/匯出等動作原本毫無回饋,實測 5/7 使用者不確定成功與否、甚至重複點擊 */
+var toastTimer = null;
+function toast(html, ms){
+  var el = document.getElementById('annoToast'); if(!el) return;
+  el.innerHTML = html; el.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(function(){ el.hidden = true; }, ms || 4200); }
+
+function walker(){ return document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, { acceptNode: function(n){
+  var p = n.parentElement;
+  if(!p || p.closest(UI + ',script,style,#annoPrintApp,.annoPrintNo')) return NodeFilter.FILTER_REJECT;
+  return NodeFilter.FILTER_ACCEPT; } }); }
+function fullText(){ var w = walker(), s = '', n; while(n = w.nextNode()) s += n.nodeValue; return s; }
+function pointToOffset(container, offset){
+  var r = document.createRange(); r.setStart(document.body, 0);
+  try{ r.setEnd(container, offset); }catch(e){ return -1; }
+  return r.toString().length; }
+function unwrapAll(){
+  document.querySelectorAll('mark.anno').forEach(function(m){
+    var p = m.parentNode; while(m.firstChild) p.insertBefore(m.firstChild, m); p.removeChild(m); });
+  document.body.normalize(); }
+/* ---- anchoring:引文為主、位置為輔(W3C TextQuoteSelector 精神) ----
+   新標註存 quote + 前後上下文(prefix/suffix);定位時以 quote 為準,重複文字
+   用上下文消歧、再用位置就近決勝。舊標註無上下文 → 退回位置就近,成功後就地補上。 */
+var CTX = 32; /* 前後文擷取字數 */
+function findAll(full, q){
+  var out = [], i = full.indexOf(q);
+  while(i >= 0){ out.push(i); i = full.indexOf(q, i + 1); }
+  return out; }
+function ctxScore(full, pos, endPos, a){ /* 上下文吻合的字數,越高越可能是原標的 */
+  var s = 0;
+  if(a.prefix){
+    var before = full.slice(Math.max(0, pos - a.prefix.length), pos);
+    var i = before.length - 1, j = a.prefix.length - 1;
+    while(i >= 0 && j >= 0 && before.charAt(i) === a.prefix.charAt(j)){ s++; i--; j--; } }
+  if(a.suffix){
+    var after = full.slice(endPos, endPos + a.suffix.length), k = 0;
+    while(k < after.length && k < a.suffix.length && after.charAt(k) === a.suffix.charAt(k)){ s++; k++; } }
+  return s; }
+/* ---- 模糊比對(原文被改寫後仍救回標註):上下文重定位 + bigram Dice 相似度 ---- */
+function bigrams(s){ var g = {}; for(var i = 0; i < s.length - 1; i++){ var b = s.substr(i, 2); g[b] = (g[b] || 0) + 1; } return g; }
+function biCount(s){ return s.length > 1 ? s.length - 1 : (s.length ? 1 : 0); }
+function diceWith(qg, qn, cand){ /* 與已算好的引文 bigram 比對,回傳 Dice 相似度 0~1 */
+  if(!cand.length) return 0;
+  var cg = bigrams(cand), cn = biCount(cand), inter = 0;
+  for(var k in cg){ if(qg[k]) inter += Math.min(qg[k], cg[k]); }
+  return (qn + cn) ? (2 * inter) / (qn + cn) : 0; }
+function contextRegion(a, full){ /* 用最靠近引文的短上下文錨點,框出被改寫段落現在的位置 */
+  var pfx = a.prefix || '', sfx = a.suffix || '';
+  var pa = pfx.slice(-14), sa = sfx.slice(0, 14), start = -1, end = -1;
+  if(pa){ var pi = full.indexOf(pa); if(pi >= 0) start = pi + pa.length; }
+  if(start < 0) return null;
+  if(sa){ var si = full.indexOf(sa, start); if(si >= 0) end = si; }
+  if(end <= start || end - start > a.quote.length * 4 + 40) return null;
+  return { start: start, end: end }; }
+function slideDice(full, q, lo, hi){ /* 在 [lo,hi] 內滑窗找與 q 最相似的片段 */
+  var ql = q.length, qg = bigrams(q), qn = biCount(q);
+  var step = Math.max(2, Math.floor(ql / 6)), best = null, lens = [ql, Math.round(ql * 1.35), Math.round(ql * 0.7)];
+  for(var i = lo; i < hi; i += step){
+    for(var li = 0; li < lens.length; li++){
+      var L = lens[li]; if(L < 3 || i + L > hi) continue;
+      var sc = diceWith(qg, qn, full.substr(i, L));
+      if(!best || sc > best.score) best = { start: i, end: i + L, score: sc }; }
+    if(best && best.score > 0.92) break; }
+  return best; }
+function fuzzyLocate(a, full){
+  var q = a.quote; if(q.length < 6) return null;                       /* 太短不做模糊比對,避免亂配 */
+  var cr = contextRegion(a, full);                                     /* (A) 上下文重定位,前後文還在時最準 */
+  if(cr && (cr.end - cr.start <= q.length * 2 || diceWith(bigrams(q), biCount(q), full.slice(cr.start, cr.end)) >= 0.15))
+    return { start: cr.start, end: cr.end };
+  var loc = slideDice(full, q, Math.max(0, a.start - 1500), Math.min(full.length, a.end + 1500)); /* (B) 舊位置附近 */
+  if(loc && loc.score >= 0.5) return { start: loc.start, end: loc.end };
+  if(full.length <= 200000){                                           /* (C) 全文(過大則略過防卡頓) */
+    var g = slideDice(full, q, 0, full.length);
+    if(g && g.score >= 0.55) return { start: g.start, end: g.end }; }
+  return null; }
+function backfillCtx(a, full){ /* 舊標註定位成功後就地補上上下文,順勢升級為穩健格式 */
+  if(a.prefix == null || a.suffix == null){ a.prefix = full.slice(Math.max(0, a.start - CTX), a.start); a.suffix = full.slice(a.end, a.end + CTX); } }
+function anchor(a, full){
+  if(!a.quote) return a.start >= 0 && a.end > a.start && a.end <= full.length; /* 無引文舊資料:僅靠位置 */
+  if(full.substr(a.start, a.end - a.start) === a.quote){ a.approx = false; backfillCtx(a, full); return true; } /* 1) 原位置精準命中 */
+  var idxs = findAll(full, a.quote);                                   /* 2) 全文精確比對 */
+  if(idxs.length === 1){ a.start = idxs[0]; a.end = idxs[0] + a.quote.length; a.approx = false; backfillCtx(a, full); return true; }
+  if(idxs.length > 1){                                                 /* 多處重複:上下文優先、位置就近決勝 */
+    var best = idxs[0], bestScore = -1, bestDist = Infinity;
+    idxs.forEach(function(i){ var sc = ctxScore(full, i, i + a.quote.length, a), dist = Math.abs(i - a.start);
+      if(sc > bestScore || (sc === bestScore && dist < bestDist)){ bestScore = sc; bestDist = dist; best = i; } });
+    a.start = best; a.end = best + a.quote.length; a.approx = false; backfillCtx(a, full); return true; }
+  var f = fuzzyLocate(a, full);                                        /* 3) 找不到精確 → 模糊救回(標為近似) */
+  if(f){ a.start = f.start; a.end = f.end; a.approx = true; return true; }
+  a.approx = false; return false;                                      /* 4) 徹底找不到 → orphan */
+}
+function wrapRange(a){
+  var w = walker(), acc = 0, n, targets = [];
+  while(n = w.nextNode()){
+    var len = n.nodeValue.length;
+    if(acc + len > a.start && acc < a.end) targets.push({ node: n, s: Math.max(0, a.start - acc), e: Math.min(len, a.end - acc) });
+    acc += len; if(acc >= a.end) break; }
+  targets.forEach(function(t){
+    if(t.e <= t.s) return;
+    var r = document.createRange(); r.setStart(t.node, t.s); r.setEnd(t.node, t.e);
+    var m = document.createElement('mark');
+    m.className = 'anno c-' + a.color + (a.thread.length ? ' note' : '') + (a.resolved ? ' res' : '') + (a.approx ? ' approx' : '') + (a.suggestion ? ' sug' : ''); m.dataset.id = a.id;
+    if(a.thread.length) m.title = a.thread.map(function(x){ return (x.author ? x.author + ': ' : '') + x.text; }).join('\n');
+    try{ r.surroundContents(m); }catch(e){} }); }
+function renderAll(){
+  unwrapAll();
+  var full = fullText();
+  annos.forEach(function(a){
+    a.orphan = !anchor(a, full);
+    /* 提議是否已經被實現:文件現在這段文字已經等於提議內容(通常是 AI 照著修改指令改好了,
+       或別人先改了)。此時提議不該再顯示成「待處理」—— 按下接受只會產生一筆誤導的稽核紀錄。
+       這是實際跑完 AI 閉環才發現的問題。 */
+    if(a.suggestion && !a.orphan){
+      a.sugFulfilled = full.substr(a.start, a.end - a.start).trim() === a.suggestion.trim();
+    } else if(a.sugFulfilled){ delete a.sugFulfilled; }
+  });
+  annos.forEach(function(a){ if(!a.orphan) wrapRange(a); });
+  updatePanel(); save(); }
+
+var bar = document.getElementById('annoBar');
+bar.addEventListener('mousedown', function(e){ e.preventDefault(); });
+function showBarForSelection(){
+  if(editing){ bar.hidden = true; return; }
+  var sel = window.getSelection();
+  if(!sel.rangeCount || sel.isCollapsed){ bar.hidden = true; return; }
+  var r = sel.getRangeAt(0);
+  var c = r.commonAncestorContainer; c = c.nodeType === 1 ? c : c.parentElement;
+  if(!c || c.closest(UI) || !r.toString().trim()){ bar.hidden = true; return; }
+  var rect = r.getBoundingClientRect();
+  bar.hidden = false;
+  var x = Math.min(Math.max(8, rect.left + rect.width/2 - bar.offsetWidth/2), window.innerWidth - bar.offsetWidth - 8);
+  var y = rect.top - 44; if(y < 8) y = rect.bottom + 8;
+  bar.style.left = x + 'px'; bar.style.top = y + 'px'; }
+document.addEventListener('mouseup', function(e){
+  if(e.target.closest && e.target.closest(UI)) return;
+  setTimeout(showBarForSelection, 10); });
+bar.querySelectorAll('button').forEach(function(b){ b.addEventListener('click', function(){
+  var sel = window.getSelection(); if(!sel.rangeCount) return;
+  var r = sel.getRangeAt(0);
+  var start = pointToOffset(r.startContainer, r.startOffset);
+  var end = pointToOffset(r.endContainer, r.endOffset);
+  if(start < 0 || end <= start) return;
+  var full0 = fullText();
+  var a = { id: uid(), start: start, end: end, quote: r.toString(),
+    prefix: full0.slice(Math.max(0, start - CTX), start), suffix: full0.slice(end, end + CTX),
+    /* label:把「當下這個顏色代表什麼」快照進標註。之後使用者切換 🎨 預設集時,既有標註不會被
+       偷改語意(實測:某人標的「有問題」切預設後變成「事實錯誤／幻覺」,還照樣匯出到 AI 指令) */
+    color: b.dataset.c, label: LEGEND[b.dataset.c], thread: [], resolved: false, ts: Date.now() };
+  var rect = r.getBoundingClientRect();
+  annos.push(a); sel.removeAllRanges(); bar.hidden = true;
+  dismissOnboard();
+  renderAll(); openPop(a.id, rect); }); });
+
+var pop = document.getElementById('annoPop'), popId = null;
+/* 輸入防呆:打到一半的回覆先存成草稿,重開同一條標註時還原 */
+var drafts = {};
+function stashDraft(){
+  if(!pop.hidden && popId){
+    var t = pop.querySelector('.ap-cta').value.trim();
+    if(t) drafts[popId] = t; else delete drafts[popId]; } }
+function closePop(){ stashDraft(); pop.hidden = true; }
+window.addEventListener('beforeunload', function(e){
+  stashDraft();
+  if(editing || Object.keys(drafts).length){ e.preventDefault(); e.returnValue = ''; } });
+function renderThread(a){
+  var box = pop.querySelector('.ap-thread'); box.innerHTML = '';
+  a.thread.forEach(function(m){
+    var d = document.createElement('div'); d.className = 'msg' + (m.sys ? ' sys' : '');
+    var h = document.createElement('div'); h.className = 'mh';
+    h.textContent = (m.author || T.anon) + (m.ts ? ' · ' + new Date(m.ts).toLocaleString(T.dl, { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
+    var t = document.createElement('div'); t.className = 'mt'; t.textContent = m.text;
+    d.appendChild(h); d.appendChild(t); box.appendChild(d); });
+  box.scrollTop = box.scrollHeight; }
+/* 建議修訂:一則標註可帶一個 suggestion(提議的新文字);接受即套用進文件文字 */
+function renderSug(a){
+  var wrap = pop.querySelector('.ap-sug'), tgl = wrap.querySelector('.ap-sugtoggle'),
+      edit = wrap.querySelector('.ap-sugedit'), view = wrap.querySelector('.ap-sugview'),
+      done = wrap.querySelector('.ap-sugdone');
+  edit.hidden = true; tgl.textContent = T.sugToggle;
+  view.hidden = true; done.hidden = true; tgl.hidden = false;
+  if(a.suggestion && a.sugFulfilled){
+    /* 文件已經等於提議內容(AI 照修改指令改好了,或別人先改了)→ 顯示「已照做」而不是「待處理」,
+       並隱藏「接受」(按了只是 no-op,還會留下一筆原值已過期的誤導稽核紀錄) */
+    tgl.hidden = true; view.hidden = false;
+    wrap.querySelector('.ap-sugtext').textContent = T.sugFulfilledLab;
+    renderDiff(wrap.querySelector('.ap-sugdiff'), diffWords(a.quote, a.suggestion));
+    wrap.querySelector('.ap-sugnote').textContent = T.sugFulfilledNote;
+    var accF = wrap.querySelector('.ap-sugaccept'); accF.hidden = true;
+    var rmF = wrap.querySelector('.ap-sugremove'); rmF.hidden = false; rmF.textContent = T.sugFulfilledDone;
+  } else if(a.suggestion){
+    tgl.hidden = true; view.hidden = false;
+    wrap.querySelector('.ap-sugtext').textContent = T.sugLabel + T.sep;
+    renderDiff(wrap.querySelector('.ap-sugdiff'), diffWords(a.quote, a.suggestion));
+    wrap.querySelector('.ap-sugnote').textContent = a.orphan ? T.sugOrphan : T.sugAcceptNote;
+    var acc = wrap.querySelector('.ap-sugaccept'); acc.hidden = false; acc.textContent = T.sugAccept; acc.disabled = !!a.orphan; acc.title = a.orphan ? T.sugOrphan : T.sugAcceptNote;
+    var rm = wrap.querySelector('.ap-sugremove'); rm.hidden = false; rm.textContent = T.sugRemove;
+  } else if(a.applied){
+    /* 已套用:顯示原值→新值的對照、誰在何時套用,並提供還原 */
+    tgl.hidden = true; done.hidden = false;
+    wrap.querySelector('.ap-donelab').textContent = T.sugAppliedLab;
+    renderDiff(wrap.querySelector('.ap-sugdiff2'), diffWords(a.applied.from, a.applied.to));
+    wrap.querySelector('.ap-donemeta').textContent = (a.applied.by || T.anon) +
+      (a.applied.ts ? ' · ' + new Date(a.applied.ts).toLocaleString(T.dl) : '');
+    wrap.querySelector('.ap-sugundo').textContent = T.sugUndo;
+  } }
+/* 把標記處的文字換成 newText(接受建議 / 還原 共用) */
+function replaceMarkText(a, newText){
+  var ms = document.querySelectorAll('mark.anno[data-id="' + a.id + '"]');
+  if(!ms.length) return false;
+  ms[0].textContent = newText;
+  for(var i = 1; i < ms.length; i++) ms[i].textContent = '';
+  a.quote = newText; a.prefix = null; a.suffix = null; a.approx = false;
+  return true; }
+/* 接受建議:必須留下可稽核的痕跡(原值/新值/誰/何時)並且可還原 —— 會計角色的紅線:
+   「金額被改過但查不到原值、也不知道誰改的,在我們公司過不了複核」 */
+function acceptSuggestion(a){
+  if(!a.suggestion) return;
+  var before = a.quote, after = a.suggestion;
+  if(!replaceMarkText(a, after)){ toast(T.sugOrphan); return; }
+  a.applied = { from: before, to: after, by: getAuthor(), ts: Date.now() };
+  /* 寫進對話串:這樣痕跡會跟著含標記版傳給別人,也會出現在報告/Markdown/JSON 匯出裡 */
+  a.thread.push({ id: uid() + 'm', author: getAuthor(), sys: true,
+    text: F(T.sugAppliedLog, { from: before, to: after }), ts: Date.now() });
+  delete a.suggestion;
+  renderAll(); persistEdited();
+  toast(F(T.sugAppliedToast, { from: before, to: after })); }
+/* 還原:把文字改回套用前的原值,同樣留痕 */
+function undoApplied(a){
+  if(!a.applied) return;
+  var back = a.applied.from, cur = a.quote;
+  if(!replaceMarkText(a, back)){ toast(T.sugOrphan); return; }
+  a.suggestion = cur;                      /* 建議退回「未套用」狀態,可再次接受 */
+  a.thread.push({ id: uid() + 'm', author: getAuthor(), sys: true,
+    text: F(T.sugRevertLog, { from: cur, to: back }), ts: Date.now() });
+  delete a.applied;
+  renderAll(); persistEdited();
+  toast(T.sugRevertToast); }
+function openPop(id, rect){
+  var a = byId(id); if(!a) return;
+  stashDraft(); popId = id;
+  pop.querySelector('.ap-quote').textContent = '「' + (a.quote.length > 80 ? a.quote.slice(0,80) + '…' : a.quote) + '」';
+  var whoIn = pop.querySelector('.ap-whoin');
+  whoIn.value = getAuthor();
+  pop.querySelector('.ap-who').classList.toggle('need', !whoIn.value);
+  pop.querySelector('.ap-cta').value = drafts[id] || '';
+  renderThread(a);
+  renderSug(a);
+  pop.querySelector('.ap-res').textContent = a.resolved ? T.reopen : T.resolve;
+  pop.querySelectorAll('.ap-colors button').forEach(function(x){ x.classList.toggle('sel', x.dataset.c === a.color); });
+  pop.hidden = false;
+  var x = Math.min(Math.max(8, rect.left), window.innerWidth - pop.offsetWidth - 8);
+  var y = rect.bottom + 8;
+  if(y + pop.offsetHeight > window.innerHeight - 8) y = Math.max(8, rect.top - pop.offsetHeight - 8);
+  pop.style.left = x + 'px'; pop.style.top = y + 'px';
+  pop.querySelector('.ap-cta').focus(); }
+document.addEventListener('click', function(e){
+  if(!e.target.closest) return;
+  var m = e.target.closest('mark.anno');
+  if(m && !editing){ e.preventDefault(); openPop(m.dataset.id, m.getBoundingClientRect()); return; }
+  if(!e.target.closest('#annoPop,#annoBar')) closePop(); });
+/* 註解視窗可拖曳(滑鼠/觸控通用),避免擋到文字 */
+pop.querySelector('.ap-drag').addEventListener('pointerdown', function(e){
+  if(e.target.closest('.ap-close')) return;
+  e.preventDefault();
+  var sx = e.clientX, sy = e.clientY, r = pop.getBoundingClientRect();
+  function mv(ev){
+    var x = Math.min(Math.max(4, r.left + ev.clientX - sx), window.innerWidth - pop.offsetWidth - 4);
+    var y = Math.min(Math.max(4, r.top + ev.clientY - sy), window.innerHeight - 40);
+    pop.style.left = x + 'px'; pop.style.top = y + 'px'; }
+  function up(){ document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); }
+  document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up); });
+pop.querySelector('.ap-close').addEventListener('click', function(){ closePop(); });
+/* 署名欄:邊打邊存,並解除「未填」的紅框提示 */
+pop.querySelector('.ap-whoin').addEventListener('input', function(){
+  setAuthor(this.value);
+  pop.querySelector('.ap-who').classList.toggle('need', !this.value.trim()); });
+pop.querySelector('.ap-sugtoggle').addEventListener('click', function(){
+  var a = byId(popId); if(!a) return;
+  var wrap = pop.querySelector('.ap-sug');
+  wrap.querySelector('.ap-sugtoggle').hidden = true; wrap.querySelector('.ap-sugview').hidden = true;
+  var ed = wrap.querySelector('.ap-sugedit'); ed.hidden = false;
+  /* 預填原文並「全選」:使用者直接打字就是整段替換,不會黏在原文後面(實測有人因此放棄) */
+  var ta = ed.querySelector('.ap-sugta'); ta.value = a.suggestion || a.quote; ta.focus(); ta.select(); });
+pop.querySelector('.ap-sugcancel').addEventListener('click', function(){ var a = byId(popId); if(a) renderSug(a); });
+pop.querySelector('.ap-sugsave').addEventListener('click', function(){
+  var a = byId(popId); if(!a) return;
+  var v = pop.querySelector('.ap-sugta').value.trim();
+  if(v && v !== a.quote) a.suggestion = v; else delete a.suggestion;
+  renderAll(); renderSug(a); });
+pop.querySelector('.ap-sugremove').addEventListener('click', function(){ var a = byId(popId); if(a){ delete a.suggestion; renderAll(); renderSug(a); } });
+pop.querySelector('.ap-sugaccept').addEventListener('click', function(){ var a = byId(popId); if(a && !a.orphan){ acceptSuggestion(a); renderSug(a); renderThread(a); } });
+pop.querySelector('.ap-sugundo').addEventListener('click', function(){ var a = byId(popId); if(a){ undoApplied(a); renderSug(a); renderThread(a); } });
+pop.querySelector('.ap-save').addEventListener('click', function(){
+  var a = byId(popId);
+  if(a){
+    var txt = pop.querySelector('.ap-cta').value.trim();
+    if(txt){
+      /* 沒填名字就先擋下並聚焦署名欄,不要默默送出「匿名」(協作時看不出誰講的,實測是最致命的一點) */
+      var whoIn = pop.querySelector('.ap-whoin');
+      if(!whoIn.value.trim()){
+        pop.querySelector('.ap-who').classList.add('need');
+        whoIn.focus(); toast(T.needName); return; }
+      setAuthor(whoIn.value);
+      a.thread.push({ id: uid() + 'm', author: getAuthor(), text: txt, ts: Date.now() });
+      pop.querySelector('.ap-cta').value = '';
+      delete drafts[popId];
+      renderAll(); renderThread(a);
+      return; /* 送出後保持開啟,方便接著看/再回覆 */
+    } }
+  closePop(); });
+pop.querySelector('.ap-res').addEventListener('click', function(){
+  var a = byId(popId); if(!a) return;
+  a.resolved = !a.resolved;
+  this.textContent = a.resolved ? T.reopen : T.resolve;
+  renderAll(); });
+pop.querySelector('.ap-del').addEventListener('click', function(){
+  addTombs([popId]);
+  annos = annos.filter(function(x){ return x.id !== popId; });
+  delete drafts[popId];
+  renderAll(); pop.hidden = true; });
+pop.querySelectorAll('.ap-colors button').forEach(function(b){ b.addEventListener('click', function(){
+  var a = byId(popId); if(a){ a.color = b.dataset.c; renderAll(); }
+  pop.querySelectorAll('.ap-colors button').forEach(function(x){ x.classList.toggle('sel', x === b); }); }); });
+
+var panel = document.getElementById('annoPanel'), list = document.getElementById('annoList'), countEl = document.getElementById('annoCount');
+/* 首次使用提示:教核心用法(選字→標色→留言),順便講清楚編輯／建議修改的差異;跨所有文件只顯示一次 */
+var onboard = document.getElementById('annoOnboard');
+function dismissOnboard(){ onboard.hidden = true; try{ localStorage.setItem('annoReader::onboarded', '1'); }catch(e){} }
+onboard.querySelector('.ob-dismiss').addEventListener('click', dismissOnboard);
+document.getElementById('annoToggle').addEventListener('click', function(){
+  panel.hidden = !panel.hidden;
+  if(!panel.hidden){ var seen = false; try{ seen = localStorage.getItem('annoReader::onboarded') === '1'; }catch(e){}
+    onboard.hidden = seen; } });
+/* 篩選狀態:關鍵字 / 顏色(可多選) / 只看未解決 */
+var filter = { q: '', colors: {}, open: false };
+document.getElementById('annoSearch').addEventListener('input', function(){
+  filter.q = this.value.trim().toLowerCase(); updatePanel(); });
+document.querySelectorAll('.ap-filter .fcolor').forEach(function(b){ b.addEventListener('click', function(){
+  filter.colors[b.dataset.c] = !filter.colors[b.dataset.c];
+  b.classList.toggle('on', !!filter.colors[b.dataset.c]); updatePanel(); }); });
+document.getElementById('annoFOpen').addEventListener('click', function(){
+  filter.open = !filter.open; this.classList.toggle('on', filter.open); updatePanel(); });
+function updatePanel(){
+  var open = annos.filter(function(a){ return !a.resolved; }).length;
+  countEl.textContent = !annos.length ? '0'
+    : (open === 0 ? annos.length + ' ✓'
+    : (open < annos.length ? F(T.openCount, { t: annos.length, o: open }) : String(annos.length)));
+  list.innerHTML = '';
+  if(!annos.length){ var em = document.createElement('div'); em.className = 'empty'; em.textContent = T.emptyList; list.appendChild(em); return; }
+  var anyColor = Object.keys(filter.colors).some(function(c){ return filter.colors[c]; });
+  var shown = annos.slice().sort(function(a,b){ return a.start - b.start; }).filter(function(a){
+    if(anyColor && !filter.colors[a.color]) return false;
+    if(filter.open && a.resolved) return false;
+    if(filter.q){
+      var hay = (a.quote + ' ' + a.thread.map(function(m){ return (m.author || '') + ' ' + m.text; }).join(' ')).toLowerCase();
+      if(hay.indexOf(filter.q) < 0) return false; }
+    return true; });
+  if(!shown.length){ var em2 = document.createElement('div'); em2.className = 'empty'; em2.textContent = T.emptyFilter; list.appendChild(em2); return; }
+  shown.forEach(function(a){
+    var d = document.createElement('div'); d.className = 'ap-item' + (a.orphan ? ' orphan' : '') + (a.resolved ? ' resolved' : '') + (a.approx ? ' approx' : '') + (a.suggestion ? ' sug' : '');
+    if(a.orphan) d.title = T.orphanHint; else if(a.approx) d.title = T.approxHint;
+    var dot = document.createElement('span'); dot.className = 'dot c-' + a.color; d.appendChild(dot);
+    if(a.suggestion){ var bg = document.createElement('span'); bg.className = 'badge'; bg.textContent = T.sugBadge; d.appendChild(bg); }
+    var q = document.createElement('span'); q.className = 'q';
+    q.textContent = (a.orphan ? T.orphan : (a.approx ? T.approxMark : '')) + (a.resolved ? '✓ ' : '') + (a.quote.length > 46 ? a.quote.slice(0,46) + '…' : a.quote);
+    d.appendChild(q);
+    if(a.suggestion){ var sl = document.createElement('div'); sl.className = 'sugline'; sl.textContent = '→ ' + T.sugLabel + T.sep + '「' + (a.suggestion.length > 42 ? a.suggestion.slice(0,42) + '…' : a.suggestion) + '」'; d.appendChild(sl); }
+    if(a.thread.length){
+      var f = a.thread[0];
+      var nn = document.createElement('div'); nn.className = 'n';
+      nn.textContent = '📝 ' + (f.author ? f.author + T.sep : '') + f.text;
+      d.appendChild(nn);
+      if(a.thread.length > 1){
+        var l = a.thread[a.thread.length - 1];
+        var nn2 = document.createElement('div'); nn2.className = 'n';
+        nn2.textContent = '↳ ' + (l.author ? l.author + T.sep : '') + l.text + (a.thread.length > 2 ? F(T.more, { n: a.thread.length }) : '');
+        d.appendChild(nn2); } }
+    d.addEventListener('click', function(){
+      var m = document.querySelector('mark.anno[data-id="' + a.id + '"]');
+      if(!m) return;
+      m.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      m.classList.add('flash'); setTimeout(function(){ m.classList.remove('flash'); }, 1600); });
+    list.appendChild(d); }); }
+
+document.getElementById('annoClear').addEventListener('click', function(){
+  if(annos.length && confirm(F(T.confirmClear, { n: annos.length }))){
+    addTombs(annos.map(function(a){ return a.id; }));
+    annos = []; renderAll(); } });
+/* 👤 名稱:改為就地編輯 —— 有標註時開最近一則的留言視窗並聚焦署名欄;沒有標註時直接用 toast 說明何時可設定。
+   舊版用 prompt() 在部分環境不會出現,使用者回報「按了完全沒反應」。 */
+document.getElementById('annoAuthor').addEventListener('click', function(e){
+  /* 擋掉冒泡:否則全域「點 #annoPop 以外就關閉」的處理器會立刻把剛開的視窗關掉 */
+  e.stopPropagation();
+  var target = annos.filter(function(a){ return !a.orphan; })[0];
+  if(!target){ toast(T.nameNoAnno); return; }
+  var m = document.querySelector('mark.anno[data-id="' + target.id + '"]');
+  openPop(target.id, m ? m.getBoundingClientRect() : { left: 40, top: 80, bottom: 100 });
+  var whoIn = pop.querySelector('.ap-whoin'); whoIn.focus(); whoIn.select(); });
+/* 顏色意義:套到所有提示文字;🎨 可自訂 */
+function applyLegend(){
+  ['y','r','g','b'].forEach(function(c){
+    var t = T.cn[c] + T.sep + LEGEND[c];
+    var bb = bar.querySelector('button.c-' + c), pb = pop.querySelector('.ap-colors button.c-' + c);
+    bb.title = t; bb.querySelector('.blab').textContent = LEGEND[c];
+    pb.title = t; pb.querySelector('.blab').textContent = LEGEND[c];
+    var fc = document.querySelector('.ap-filter .fcolor[data-c="' + c + '"]');
+    if(fc){ fc.title = T.only + t; var fl = fc.querySelector('.fclab'); if(fl) fl.textContent = LEGEND[c]; } }); }
+/* 🎨 圖例:改為預設集選單(一般審閱 / AI 報告審閱 / 自訂),語言感知、隨檔案傳遞 */
+var legendMenu = document.getElementById('annoLegendMenu');
+function markLegendSel(){ legendMenu.querySelectorAll('[data-preset]').forEach(function(b){ b.classList.toggle('sel', b.getAttribute('data-preset') === (legendMode || 'general')); }); }
+document.getElementById('annoLegend').addEventListener('click', function(e){ e.stopPropagation(); exportMenu.hidden = true; aiMenu.hidden = true; legendMenu.hidden = !legendMenu.hidden; if(!legendMenu.hidden) markLegendSel(); });
+legendMenu.querySelectorAll('[data-preset]').forEach(function(b){ b.addEventListener('click', function(){
+  legendMode = b.getAttribute('data-preset');
+  try{ localStorage.setItem('annoReader::legendPreset', legendMode); }catch(e){}
+  applyLegendMode(); legendMenu.hidden = true;
+  /* 明確告知既有標註不會被改語意(切換後新標的才用新意義),避免使用者以為自己的標註被偷改 */
+  if(annos.length) toast(F(T.legendSwitched, { n: annos.length })); }); });
+document.getElementById('annoLegendCustom').addEventListener('click', function(){
+  legendMenu.hidden = true;
+  var kn = (L === 'zh') ? { y:'黃', r:'紅', g:'綠', b:'藍' } : { y:'y', r:'r', g:'g', b:'b' };
+  var cur = ['y','r','g','b'].map(function(c){ return kn[c] + '=' + LEGEND[c]; }).join(', ');
+  var n = prompt(T.legendPrompt, cur);
+  if(n === null) return;
+  var map = { '黃':'y', '紅':'r', '綠':'g', '藍':'b', 'y':'y', 'r':'r', 'g':'g', 'b':'b', 'yellow':'y', 'red':'r', 'green':'g', 'blue':'b' };
+  var next = copyLeg(LEGEND);
+  n.split(/[,，]/).forEach(function(seg){ var kv = seg.split('='); if(kv.length === 2){ var k = map[kv[0].trim().toLowerCase()] || map[kv[0].trim()]; if(k && kv[1].trim()) next[k] = kv[1].trim(); } });
+  customLegend = next; legendMode = 'custom';
+  try{ localStorage.setItem('annoReader::legendPreset', 'custom'); localStorage.setItem('annoReader::legend', JSON.stringify(next)); }catch(e){}
+  applyLegendMode(); });
+document.addEventListener('click', function(e){ if(!legendMenu.hidden && e.target.closest && !e.target.closest('#annoLegendMenu,#annoLegend')) legendMenu.hidden = true; });
+
+/* ---- 語言:所有介面文字集中在這裡填,切換時整組重刷 ---- */
+var editBtn = document.getElementById('annoEdit');
+function applyI18n(){
+  pop.querySelector('.ap-draglab').textContent = T.drag;
+  pop.querySelector('.ap-drag').title = T.dragTitle;
+  pop.querySelector('.ap-close').title = T.close;
+  pop.querySelector('.ap-cta').placeholder = T.ph;
+  pop.querySelector('.ap-wholab').textContent = T.whoLab + T.sep;
+  pop.querySelector('.ap-whoin').placeholder = T.whoPh;
+  pop.querySelector('.ap-sugta').placeholder = T.sugPh;
+  pop.querySelector('.ap-sugsave').textContent = T.sugSave;
+  pop.querySelector('.ap-sugcancel').textContent = T.sugCancel;
+  var stgl = pop.querySelector('.ap-sugtoggle'); stgl.textContent = T.sugToggle; stgl.title = T.sugToggleTitle;
+  onboard.querySelector('.ob-body').innerHTML = T.obBody;
+  onboard.querySelector('.ob-dismiss').textContent = T.obDismiss; onboard.querySelector('.ob-dismiss').title = T.close;
+  var pres = pop.querySelector('.ap-res'); pres.textContent = T.resolve; pres.title = T.tipRes;
+  var pdel = pop.querySelector('.ap-del'); pdel.textContent = T.del; pdel.title = T.tipDel;
+  var psav = pop.querySelector('.ap-save'); psav.textContent = T.send; psav.title = T.tipSave;
+  document.getElementById('annoTogLab').textContent = T.tog;
+  var tog = document.getElementById('annoToggle'); tog.title = T.tipToggle;
+  document.getElementById('annoResize').title = T.resizeTitle;
+  document.getElementById('annoPanTitle').textContent = T.panel;
+  var au = document.getElementById('annoAuthor'); au.textContent = T.authorBtn; au.title = T.authorTitle;
+  var dn = document.getElementById('annoDown'); dn.textContent = T.down; dn.title = T.downTitle;
+  var exb = document.getElementById('annoExport'); exb.textContent = T.exBtn; exb.title = T.tipExport;
+  var em = document.getElementById('annoExportMenu');
+  em.querySelector('.lm-title').textContent = T.exTitle;
+  var exItem = function(sel, name, sub){ var b = em.querySelector(sel); b.querySelector('.lm-name').textContent = name; b.querySelector('.lm-sub').textContent = sub; };
+  exItem('[data-export="print"]', T.exPrint, T.exPrintSub);
+  exItem('[data-export="report"]', T.exReport, T.exReportSub);
+  exItem('[data-export="md"]', T.exMd, T.exMdSub);
+  exItem('[data-export="json"]', T.exJson, T.exJsonSub);
+  var lg = document.getElementById('annoLegend'); lg.textContent = T.legendBtn; lg.title = T.legendTitle;
+  editBtn.textContent = editing ? T.editDone : T.edit; editBtn.title = T.editTitle;
+  var clr = document.getElementById('annoClear'); clr.textContent = T.clear; clr.title = T.tipClear;
+  document.getElementById('annoSearch').placeholder = T.searchPh;
+  var fo = document.getElementById('annoFOpen'); fo.querySelector('.folab').textContent = T.open; fo.title = T.openTitle;
+  var lb = document.getElementById('annoLang'); lb.textContent = T.langBtn; lb.title = T.langTitle;
+  document.querySelector('.ap-hint').textContent = storageOK ? T.hint : T.noStorage;
+  var prb = document.getElementById('annoPrompt'); prb.textContent = T.pmBtn; prb.title = T.tipPrompt;
+  var aim = document.getElementById('annoAiMenu');
+  aim.querySelector('.lm-title').textContent = T.aiMenuTitle;
+  var aiItem = function(sel, name, sub){ var b = aim.querySelector(sel); b.querySelector('.lm-name').textContent = name; b.querySelector('.lm-sub').textContent = sub; };
+  aiItem('[data-ai="prompt"]', T.aiPromptName, T.aiPromptSub);
+  aiItem('[data-ai="diff"]', T.aiDiffName, T.aiDiffSub);
+  var po = document.getElementById('annoPromptOverlay');
+  po.querySelector('.pm-title').textContent = T.pmTitle;
+  po.querySelector('.pm-hint').innerHTML = promptFull ? T.pmHintFull : T.pmHint;   /* 含 <b> 強調,故用 innerHTML */
+  po.querySelector('.pm-x').title = T.close;
+  po.querySelector('.pm-dl').textContent = T.pmDl;
+  var pf = po.querySelector('.pm-full'); pf.textContent = (promptFull ? '☑ ' : '☐ ') + T.pmFull; pf.title = T.pmFullTitle;
+  po.querySelector('.pm-copy').textContent = T.pmCopy;
+  var lm = document.getElementById('annoLegendMenu');
+  lm.querySelector('.lm-title').textContent = T.lmTitle;
+  function legSub(o){ var ic = { y:'🟡', r:'🔴', g:'🟢', b:'🔵' }; return ['y','r','g','b'].map(function(c){ return ic[c] + o[c]; }).join('  '); }
+  var gB = lm.querySelector('[data-preset="general"]'), aB = lm.querySelector('[data-preset="ai"]');
+  gB.querySelector('.lm-name').textContent = T.presetGeneral; gB.querySelector('.lm-sub').textContent = legSub(T.legend);
+  aB.querySelector('.lm-name').textContent = T.presetAI; aB.querySelector('.lm-sub').textContent = legSub(T.aiLegend);
+  document.getElementById('annoLegendCustom').textContent = T.presetCustom;
+  applyLegend(); }
+function setLang(l, fromShell){
+  if(l !== 'zh' && l !== 'en') return;
+  L = l; T = I18N[L];
+  try{ localStorage.setItem('annoReader::lang', l); }catch(e){}
+  /* 依目前預設模式在新語言下重解析圖例(general/ai 會跟著翻譯,custom/檔案帶的維持不變) */
+  LEGEND = resolveLegend(); fillLegend();
+  closePop(); applyI18n(); updatePanel();
+  /* 在閱讀器裡開的話,同步外殼的語言(含標記版單獨開啟時 parent 就是自己,跳過) */
+  if(!fromShell){ try{
+    if(window.parent && window.parent !== window && window.parent.__scopeSetLang) window.parent.__scopeSetLang(l, true);
+  }catch(e){} } }
+window.__annoSetLang = setLang;
+document.getElementById('annoLang').addEventListener('click', function(){ setLang(L === 'zh' ? 'en' : 'zh'); });
+
+/* ✏️ 編輯模式:直接修改文件文字;完成後標記自動重新對位,改動存回快取並跟著「⬇ 含標記版」 */
+editBtn.addEventListener('click', function(){
+  editing = !editing;
+  if(editing){
+    bar.hidden = true; closePop();
+    document.body.contentEditable = 'true';
+    [bar, pop, panel, document.getElementById('annoToggle')].forEach(function(el){ el.contentEditable = 'false'; });
+    document.body.style.outline = '3px dashed #d9a24a';
+    document.body.style.outlineOffset = '-3px';
+    editBtn.textContent = T.editDone;
+  } else {
+    document.body.contentEditable = 'false';
+    document.body.style.outline = ''; document.body.style.outlineOffset = '';
+    editBtn.textContent = T.edit;
+    renderAll();
+    persistEdited();
+  } });
+function persistEdited(){
+  try{
+    var ck = 'annoReader::doc::' + KEY;
+    if(localStorage.getItem(ck) !== null){
+      var s = buildStandalone();
+      if(s.length <= 1500000) localStorage.setItem(ck, s); }
+  }catch(e){} }
+
+/* 列印:標記處加編號上標,文末附「標註註解」對照表(印完自動移除) */
+var printAdded = [];
+window.addEventListener('beforeprint', function(){
+  var icons = { y:'🟡', r:'🔴', g:'🟢', b:'🔵' };
+  var sorted = annos.filter(function(a){ return !a.orphan && a.thread.length; }).sort(function(a,b){ return a.start - b.start; });
+  if(!sorted.length) return;
+  var app = document.createElement('div'); app.id = 'annoPrintApp';
+  var h = document.createElement('h2'); h.textContent = T.printTitle; h.style.fontSize = '16px'; app.appendChild(h);
+  sorted.forEach(function(a, i){
+    var ms = document.querySelectorAll('mark.anno[data-id="' + a.id + '"]');
+    if(ms.length){
+      var sup = document.createElement('sup');
+      sup.className = 'annoPrintNo'; sup.textContent = '[' + (i+1) + ']';
+      ms[ms.length - 1].appendChild(sup); printAdded.push(sup); }
+    var d = document.createElement('div'); d.style.cssText = 'margin:8px 0;font-size:12px';
+    var head = document.createElement('b');
+    head.textContent = '[' + (i+1) + '] ' + icons[a.color] + (a.resolved ? T.resolvedParen : '') + '「' + a.quote.slice(0,40) + (a.quote.length > 40 ? '…' : '') + '」';
+    d.appendChild(head);
+    a.thread.forEach(function(m){
+      var p = document.createElement('div'); p.textContent = '　' + (m.author || T.anon) + T.sep + m.text; d.appendChild(p); });
+    app.appendChild(d); });
+  document.body.appendChild(app); printAdded.push(app); });
+window.addEventListener('afterprint', function(){
+  printAdded.forEach(function(el){ el.remove(); }); printAdded = []; });
+
+/* 一頁式標註報告:引句+對話串+狀態,人類可讀,適合貼會議紀錄或存檔 */
+function exportReport(){
+  var esc = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  var ic0 = { y:'🟡', r:'🔴', g:'🟢', b:'🔵' };
+  var cname = function(a){ return ic0[a.color] + ' ' + annoLabel(a); };  /* 用標註自己的分類快照 */
+  var sorted = annos.slice().sort(function(a,b){ return a.start - b.start; });
+  var open = sorted.filter(function(a){ return !a.resolved; }).length;
+  var rows = sorted.map(function(a, i){
+    var th = a.thread.map(function(m){
+      return '<div class="m"><span class="mh">' + esc(m.author || T.anon) +
+        (m.ts ? ' · ' + new Date(m.ts).toLocaleString(T.dl) : '') + '</span><div class="mt">' + esc(m.text) + '</div></div>';
+    }).join('');
+    return '<div class="a' + (a.resolved ? ' ok' : '') + '"><div class="h">' + (i+1) + '. ' + esc(cname(a)) +
+      (a.resolved ? '<span class="st">' + T.stRes + '</span>' : '<span class="st od">' + T.stOpen + '</span>') +
+      '</div><blockquote>' + esc(a.quote) + '</blockquote>' + th + '</div>';
+  }).join('');
+  var out = '<!doctype html><html lang="' + T.hl + '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' + F(esc(T.repTitle), { name: esc(NAME) }) + '</title><style>' +
+    ':root{--bg:#fff;--tx:#222;--mut:#777;--ln:#ddd;--chip:#f4f4f4}' +
+    '@media (prefers-color-scheme:dark){:root{--bg:#181c1d;--tx:#e6eae8;--mut:#9aa8a4;--ln:#3a4143;--chip:#262c2e}}' +
+    'body{max-width:760px;margin:0 auto;padding:32px 20px;background:var(--bg);color:var(--tx);font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;font-size:14px;line-height:1.75}' +
+    'h1{font-size:22px}.meta{color:var(--mut);font-size:13px;margin-bottom:24px}' +
+    '.a{border:1px solid var(--ln);border-radius:10px;padding:14px 16px;margin-bottom:14px}' +
+    '.a.ok{opacity:.65}.h{font-weight:700;margin-bottom:6px}' +
+    '.st{font-size:12px;margin-left:8px;color:var(--mut)}.st.od{color:#c0392b}' +
+    'blockquote{margin:6px 0 10px;padding:6px 12px;border-left:3px solid var(--ln);color:var(--mut);font-size:13px}' +
+    '.m{background:var(--chip);border-radius:8px;padding:6px 10px;margin:6px 0}' +
+    '.mh{font-size:11.5px;color:var(--mut)}.mt{white-space:pre-wrap}' +
+    '</style></head><body><h1>' + T.repH1 + '</h1><div class="meta">' +
+    F(esc(T.repMeta), { name: esc(NAME), d: new Date().toLocaleString(T.dl), n: sorted.length, o: open }) + '</div>' +
+    (rows || '<p>' + T.repNone + '</p>') + '</body></html>';
+  var blob = new Blob([out], { type: 'text/html' });
+  var u = URL.createObjectURL(blob), el = document.createElement('a');
+  el.href = u; el.download = NAME.replace(/\.html?$/i, '').replace(/_(標記版|annotated)$/i, '') + T.sfxRep + '.html';
+  el.click(); URL.revokeObjectURL(u); savedToast(el.download, out.length); }
+
+/* 下載完成提示:講清楚「成功了、檔名、存到下載資料夾」(使用者原本完全不知道有沒有成功) */
+function fmtSize(n){ return n > 1024 * 1024 ? (n / 1024 / 1024).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+function savedToast(fname, bytes, extraHtml){
+  var esc = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  toast(F(T.savedToast, { f: '<b>' + esc(fname) + '</b>', s: fmtSize(bytes) }) + (extraHtml || ''), 6000); }
+
+/* 📤 匯出:一頁報告(HTML) / Markdown 清單 / JSON 結構化資料 —— 與報告/修改指令共用聚合邏輯 */
+function downloadText(text, ext, mime){
+  var blob = new Blob([text], { type: mime });
+  var u = URL.createObjectURL(blob), el = document.createElement('a');
+  el.href = u; el.download = NAME.replace(/\.html?$/i, '').replace(/_(標記版|annotated)$/i, '') + T.exSfx + ext;
+  el.click(); URL.revokeObjectURL(u); savedToast(el.download, text.length); }
+function buildMarkdown(){
+  var sorted = annos.slice().sort(function(a,b){ return a.start - b.start; });
+  var open = sorted.filter(function(a){ return !a.resolved; }).length;
+  var ic = { y:'🟡', r:'🔴', g:'🟢', b:'🔵' };
+  var lines = [ '# ' + NAME + ' — ' + T.mdTitle, F(T.mdMeta, { n: sorted.length, o: open, d: new Date().toLocaleString(T.dl) }), '' ];
+  sorted.forEach(function(a){
+    lines.push('- [' + (a.resolved ? 'x' : ' ') + '] ' + ic[a.color] + ' **' + annoLabel(a) + '** — "' + a.quote + '"' + (a.orphan ? ' ⚠' : ''));
+    if(a.suggestion) lines.push('  - → ' + T.sugLabel + T.sep + '"' + a.suggestion + '"');
+    a.thread.forEach(function(m){
+      lines.push('  - ' + (m.author || T.anon) + (m.ts ? ' (' + new Date(m.ts).toLocaleString(T.dl) + ')' : '') + T.sep + m.text); }); });
+  return lines.join('\n'); }
+function buildJSON(){
+  var sorted = annos.slice().sort(function(a,b){ return a.start - b.start; });
+  return JSON.stringify({
+    tool: 'HTMLScope', document: NAME, exported: new Date().toISOString(), legend: copyLeg(LEGEND),
+    annotations: sorted.map(function(a){
+      return { id: a.id, color: a.color, category: annoLabel(a), quote: a.quote,
+        prefix: a.prefix || '', suffix: a.suffix || '', resolved: !!a.resolved, orphan: !!a.orphan,
+        suggestion: a.suggestion || '',
+        comments: a.thread.map(function(m){ return { author: m.author || '', text: m.text, ts: m.ts || 0, time: m.ts ? new Date(m.ts).toLocaleString(T.dl) : '' }; }) }; })
+  }, null, 2); }
+var exportMenu = document.getElementById('annoExportMenu');
+document.getElementById('annoExport').addEventListener('click', function(e){ e.stopPropagation(); legendMenu.hidden = true; aiMenu.hidden = true; exportMenu.hidden = !exportMenu.hidden; });
+exportMenu.querySelectorAll('[data-export]').forEach(function(b){ b.addEventListener('click', function(){
+  var fmt = b.getAttribute('data-export'); exportMenu.hidden = true;
+  if(fmt === 'print'){
+    /* 列印／存 PDF:功能本來就有(beforeprint 會自動加標記編號+文末註解對照表),
+       但只寫在說明裡沒人找得到 —— 提升為匯出選單第一項。瀏覽器的列印對話框選「另存為 PDF」即可存檔。 */
+    toast(T.printToast, 7000);
+    setTimeout(function(){ try{ window.print(); }catch(e){} }, 120);
+  }
+  else if(fmt === 'report') exportReport();
+  else if(fmt === 'md') downloadText(buildMarkdown(), '.md', 'text/markdown');
+  else if(fmt === 'json') downloadText(buildJSON(), '.json', 'application/json'); }); });
+document.addEventListener('click', function(e){ if(!exportMenu.hidden && e.target.closest && !e.target.closest('#annoExportMenu,#annoExport')) exportMenu.hidden = true; });
+
+/* 🤖 一鍵「修改指令」:把未解決標註 + 原文 + 前後脈絡 + 留言,聚成可回餵 LLM 的結構化 prompt */
+function buildPrompt(){
+  var open = annos.filter(function(a){ return !a.resolved; }).sort(function(a,b){ return a.start - b.start; });
+  if(!open.length) return null;
+  var parts = [ F(T.pmIntro, { name: NAME, n: open.length }) ];
+  open.forEach(function(a, i){
+    var cat = T.cn[a.color] + T.sep + annoLabel(a);
+    var s = '\n### ' + T.pmNoteWord + ' ' + (i+1) + ' — ' + cat + (a.orphan ? ' ⚠' : '') + '\n';
+    s += T.pmLblMarked + T.sep + '"' + a.quote + '"\n';
+    s += T.pmLblContext + T.sep + '…' + (a.prefix || '') + '〖' + a.quote + '〗' + (a.suffix || '') + '…\n';
+    if(a.suggestion) s += T.sugLabel + T.sep + '"' + a.suggestion + '"\n';
+    if(a.thread.length){
+      s += T.pmLblComments + T.sep + '\n';
+      a.thread.forEach(function(m){
+        s += '- ' + (m.author || T.anon) + (m.ts ? ' (' + new Date(m.ts).toLocaleString(T.dl) + ')' : '') + T.sep + m.text + '\n'; });
+    } else if(!a.suggestion){ s += T.pmLblComments + T.sep + F(T.pmNoComments, { cat: annoLabel(a) }) + '\n'; }
+    parts.push(s); });
+  parts.push(T.pmOutro + (open.some(function(a){ return !!a.suggestion; }) ? T.sugRule : ''));
+  return parts.join(''); }
+var promptOverlay = document.getElementById('annoPromptOverlay');
+var promptTA = promptOverlay.querySelector('textarea');
+/* 🤖 選單:產生修改指令 / 比較版本 —— 兩個都圍繞「AI 修改這一輪」,合成一顆入口鈕,不再增加面板按鈕數 */
+var aiMenu = document.getElementById('annoAiMenu');
+document.getElementById('annoPrompt').addEventListener('click', function(e){
+  e.stopPropagation(); legendMenu.hidden = true; exportMenu.hidden = true; aiMenu.hidden = !aiMenu.hidden; });
+aiMenu.querySelectorAll('[data-ai]').forEach(function(b){ b.addEventListener('click', function(){
+  var act = b.getAttribute('data-ai'); aiMenu.hidden = true;
+  if(act === 'prompt') openPromptOverlay(); else if(act === 'diff') openDiffOverlay(); }); });
+document.addEventListener('click', function(e){ if(!aiMenu.hidden && e.target.closest && !e.target.closest('#annoAiMenu,#annoPrompt')) aiMenu.hidden = true; });
+/* 「含文件全文」開關:實測目標使用者最大的卡點 —— prompt 只含片段,指示卻要 AI「回傳完整文件」,
+   使用者不知道還要自己把原檔一起丟給 AI。開著就把全文附在指令末端,整段貼過去即可運作。 */
+var promptFull = false;
+function refreshPromptText(){
+  var txt = buildPrompt(); if(!txt) return false;
+  if(promptFull) txt += '\n\n' + T.pmFullHead + '\n' + fullText();
+  promptTA.value = txt;
+  var fb = promptOverlay.querySelector('.pm-full');
+  fb.textContent = (promptFull ? '☑ ' : '☐ ') + T.pmFull; fb.title = T.pmFullTitle;
+  return true; }
+function openPromptOverlay(){
+  if(!buildPrompt()){ toast(T.pmEmpty); return; }
+  saveBaseline();
+  refreshPromptText();
+  promptOverlay.querySelector('.pm-note').textContent = F(T.pmCount, { n: annos.filter(function(a){ return !a.resolved; }).length });
+  promptOverlay.querySelector('.pm-copy').textContent = T.pmCopy;
+  promptOverlay.hidden = false;
+  promptTA.focus(); promptTA.setSelectionRange(0, 0); }
+promptOverlay.querySelector('.pm-full').addEventListener('click', function(){
+  promptFull = !promptFull; refreshPromptText();
+  promptOverlay.querySelector('.pm-hint').textContent = promptFull ? T.pmHintFull : T.pmHint; });
+promptOverlay.querySelector('.pm-x').addEventListener('click', function(){ promptOverlay.hidden = true; });
+promptOverlay.addEventListener('click', function(e){ if(e.target === promptOverlay) promptOverlay.hidden = true; });
+promptOverlay.querySelector('.pm-copy').addEventListener('click', function(){
+  var btn = this; promptTA.select();
+  /* 立即給回饋(不等 clipboard promise):實測有人只看到文字被全選,不確定到底複製成功沒有 */
+  btn.textContent = T.pmCopied; toast(T.pmCopiedToast);
+  setTimeout(function(){ btn.textContent = T.pmCopy; }, 1800);
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(promptTA.value)['catch'](function(){ try{ document.execCommand('copy'); }catch(e){} });
+    } else { document.execCommand('copy'); }
+  }catch(e){ try{ document.execCommand('copy'); }catch(e2){} } });
+promptOverlay.querySelector('.pm-dl').addEventListener('click', function(){
+  var blob = new Blob([promptTA.value], { type: 'text/markdown' });
+  var u = URL.createObjectURL(blob), el = document.createElement('a');
+  el.href = u; el.download = NAME.replace(/\.html?$/i, '').replace(/_(標記版|annotated)$/i, '') + T.pmSfx + '.md';
+  el.click(); URL.revokeObjectURL(u); savedToast(el.download, promptTA.value.length); });
+
+/* 🔍 版本比對:記錄一個「基準版本」的全文快照,之後跟目前全文比較,顯示 AI(或你自己)這一輪改了什麼。
+   基準會在①第一次開啟文件、②每次產生修改指令時自動存(存的是「送去給 AI 之前」的樣子);
+   純本機、不烙進含標記版 —— 這是個人編修輔助,不是跨人協作資料。 */
+var BASE_KEY = KEY + '::baseline';
+function saveBaseline(){ try{ localStorage.setItem(BASE_KEY, JSON.stringify({ text: fullText(), ts: Date.now() })); }catch(e){} }
+function loadBaseline(){ try{ var raw = localStorage.getItem(BASE_KEY); return raw ? JSON.parse(raw) : null; }catch(e){ return null; } }
+
+/* 輕量 diff(Myers 演算法,字詞為單位,零依賴):編輯距離小則精準逐字比對;
+   文件過大或差異過大(可能整篇重寫)則退回「共同前綴/後綴 + 中段整塊替換」,避免卡頓 */
+/* 中英混合斷詞:中文沒有空白分字,若整段當一個 token 會讓中文 diff 幾乎沒有用(整句被當成一整塊替換)。
+   拉丁字母/數字連續視為一個詞(英文行為不變),CJK 等其他字元逐字切開(讓中文 diff 也能精準到字)。 */
+function tokenizeDiff(s){ return s.match(/\s+|[A-Za-z0-9_]+|[^\sA-Za-z0-9_]/g) || []; }
+function prefixSuffixDiff(a, b){
+  var N = a.length, M = b.length, i = 0, j = 0;
+  while(i < N && i < M && a[i] === b[i]) i++;
+  while(j < N - i && j < M - i && a[N-1-j] === b[M-1-j]) j++;
+  var ops = [];
+  for(var p = 0; p < i; p++) ops.push({ type:'eq', ai:p, bi:p });
+  for(p = i; p < N - j; p++) ops.push({ type:'del', ai:p });
+  for(p = i; p < M - j; p++) ops.push({ type:'ins', bi:p });
+  for(p = 0; p < j; p++) ops.push({ type:'eq', ai:N-j+p, bi:M-j+p });
+  return ops; }
+function myersDiffCapped(a, b, maxD){
+  var N = a.length, M = b.length, offset = N + M || 1, size = 2 * offset + 1;
+  var v = new Array(size).fill(0), trace = [];
+  for(var d = 0; d <= maxD; d++){
+    trace.push(v.slice());
+    for(var k = -d; k <= d; k += 2){
+      var idx = k + offset, down;
+      if(k === -d) down = true; else if(k === d) down = false; else down = v[idx-1] < v[idx+1];
+      var x = down ? v[idx+1] : v[idx-1] + 1, y = x - k;
+      while(x < N && y < M && a[x] === b[y]){ x++; y++; }
+      v[idx] = x;
+      if(x >= N && y >= M) return backtrackDiff(trace, N, M, offset); } }
+  return null; }
+function backtrackDiff(trace, N, M, offset){
+  var x = N, y = M, ops = [];
+  for(var d = trace.length - 1; d >= 0; d--){
+    var v = trace[d], k = x - y, idx = k + offset, down;
+    if(k === -d) down = true; else if(k === d) down = false; else down = v[idx-1] < v[idx+1];
+    var prevK = down ? k + 1 : k - 1, prevIdx = prevK + offset;
+    var prevX = v[prevIdx], prevY = prevX - prevK;
+    while(x > prevX && y > prevY){ ops.push({ type:'eq', ai:x-1, bi:y-1 }); x--; y--; }
+    if(d > 0){ if(down) ops.push({ type:'ins', bi:y-1 }); else ops.push({ type:'del', ai:x-1 }); }
+    x = prevX; y = prevY; }
+  return ops.reverse(); }
+function diffWords(oldText, newText){
+  var a = tokenizeDiff(oldText), b = tokenizeDiff(newText);
+  var ops = null;
+  if(a.length + b.length <= 20000){ ops = myersDiffCapped(a, b, Math.min(a.length + b.length, 1500)); }
+  if(!ops) ops = prefixSuffixDiff(a, b);
+  return { ops: ops, a: a, b: b }; }
+function renderDiff(container, diff){
+  container.innerHTML = '';
+  var i = 0, added = 0, removed = 0;
+  while(i < diff.ops.length){
+    var type = diff.ops[i].type, buf = [];
+    while(i < diff.ops.length && diff.ops[i].type === type){
+      var tok = type === 'ins' ? diff.b[diff.ops[i].bi] : diff.a[diff.ops[i].ai];
+      buf.push(tok);
+      if(/\S/.test(tok)){ if(type === 'ins') added++; if(type === 'del') removed++; }
+      i++; }
+    var text = buf.join('');
+    if(type === 'eq'){ container.appendChild(document.createTextNode(text)); }
+    else{ var span = document.createElement('span'); span.className = type === 'del' ? 'dv-del' : 'dv-ins'; span.textContent = text; container.appendChild(span); } }
+  return { added: added, removed: removed }; }
+var diffOverlay = document.getElementById('annoDiffOverlay');
+function openDiffOverlay(){
+  var base = loadBaseline();
+  var cur = fullText();
+  if(!base){ saveBaseline(); base = { text: cur, ts: Date.now() }; }
+  diffOverlay.querySelector('.pm-title').textContent = T.dvTitle;
+  diffOverlay.querySelector('.pm-hint').textContent = F(T.dvHint, { d: new Date(base.ts).toLocaleString(T.dl) });
+  var statsEl = diffOverlay.querySelector('.dv-stats'), bodyEl = diffOverlay.querySelector('.dv-body');
+  if(base.text === cur){
+    statsEl.textContent = ''; bodyEl.innerHTML = ''; var em = document.createElement('div'); em.className = 'dv-empty'; em.textContent = T.dvNoChange; bodyEl.appendChild(em);
+  } else {
+    var diff = diffWords(base.text, cur);
+    var st = renderDiff(bodyEl, diff);
+    statsEl.innerHTML = '';
+    var sp1 = document.createElement('span'); sp1.className = 'dv-add'; sp1.textContent = '+' + st.added; statsEl.appendChild(sp1);
+    statsEl.appendChild(document.createTextNode('  '));
+    var sp2 = document.createElement('span'); sp2.className = 'dv-rem'; sp2.textContent = '-' + st.removed; statsEl.appendChild(sp2); }
+  diffOverlay.querySelector('.dv-update').textContent = T.dvUpdate;
+  diffOverlay.querySelector('.pm-x2').textContent = T.close;
+  diffOverlay.hidden = false; }
+diffOverlay.querySelector('.pm-x').addEventListener('click', function(){ diffOverlay.hidden = true; });
+diffOverlay.querySelector('.pm-x2').addEventListener('click', function(){ diffOverlay.hidden = true; });
+diffOverlay.addEventListener('click', function(e){ if(e.target === diffOverlay) diffOverlay.hidden = true; });
+diffOverlay.querySelector('.dv-update').addEventListener('click', function(){ saveBaseline(); diffOverlay.hidden = true; });
+/* 首次開啟這份文件、尚無基準版本時,自動存一份「初見樣貌」當預設起點,讓比較功能在沒用過修改指令時也有東西可比 */
+if(!loadBaseline()) saveBaseline();
+
+/* 從文件本身(含目前的文字編輯)產出「含標記版」:對方不用閱讀器也能繼續傳遞。
+   螢光標記直接烙進 HTML+文末附靜態對照表 → 手機/信件預覽等不執行 JS 的環境也看得到;
+   正常瀏覽器開啟時引擎會清掉靜態附錄、由互動功能接管。 */
+function buildStandalone(){
+  renderAll(); /* 標記保留在輸出裡 */
+  var clone = document.documentElement.cloneNode(true);
+  ['annoBar','annoPop','annoPanel','annoPromptOverlay','annoDiffOverlay','annoLegendMenu','annoExportMenu','annoAiMenu','annoToast'].forEach(function(id){
+    var el = clone.querySelector('#' + id); if(el) el.setAttribute('hidden',''); });
+  var pa = clone.querySelector('#annoPrintApp'); if(pa) pa.remove();
+  clone.querySelectorAll('.annoPrintNo,#annoStaticApp').forEach(function(el){ el.remove(); });
+  clone.querySelectorAll('[contenteditable]').forEach(function(el){ el.removeAttribute('contenteditable'); });
+  clone.querySelectorAll('mark.anno.flash').forEach(function(m){ m.classList.remove('flash'); });
+  var bd = clone.querySelector('body'); if(bd){ bd.style.outline = ''; bd.style.outlineOffset = ''; }
+  /* 標記編號+靜態對照表(以打包當下的語言呈現) */
+  var sorted = annos.filter(function(a){ return !a.orphan; }).sort(function(a,b){ return a.start - b.start; });
+  var icons = { y:'🟡', r:'🔴', g:'🟢', b:'🔵' };
+  if(sorted.length && bd){
+    var app = document.createElement('div'); app.id = 'annoStaticApp';
+    var h = document.createElement('h2'); h.textContent = T.staticTitle; app.appendChild(h);
+    var hint = document.createElement('div'); hint.className = 'hint';
+    hint.textContent = F(T.staticHint, { n: sorted.length });
+    app.appendChild(hint);
+    sorted.forEach(function(a, i){
+      var ms = clone.querySelectorAll('mark.anno[data-id="' + a.id + '"]');
+      if(ms.length){
+        var sup = document.createElement('sup'); sup.className = 'annoPrintNo'; sup.textContent = '[' + (i+1) + ']';
+        ms[ms.length - 1].appendChild(sup); }
+      var d = document.createElement('div'); d.className = 'sa' + (a.resolved ? ' ok' : '');
+      var head = document.createElement('b');
+      head.textContent = '[' + (i+1) + '] ' + icons[a.color] + ' ' + annoLabel(a) + (a.resolved ? T.resolvedMark : '');
+      d.appendChild(head);
+      var q = document.createElement('blockquote');
+      q.textContent = a.quote.slice(0, 60) + (a.quote.length > 60 ? '…' : '');
+      d.appendChild(q);
+      a.thread.forEach(function(m){
+        var p = document.createElement('div'); p.className = 'm';
+        var who = document.createElement('b');
+        who.textContent = (m.author || T.anon) + (m.ts ? ' · ' + new Date(m.ts).toLocaleString(T.dl, { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '') + T.sep;
+        p.appendChild(who);
+        p.appendChild(document.createTextNode(m.text));
+        d.appendChild(p); });
+      app.appendChild(d); });
+    bd.insertBefore(app, bd.querySelector('script')); }
+  var json = JSON.stringify({ legend: LEGEND, annotations: annos }).replace(/</g, '\\u003c');
+  var p = clone.querySelector('#annoPreset');
+  if(p){ p.textContent = json; }
+  else{
+    var s = document.createElement('script'); s.type = 'application/json'; s.id = 'annoPreset'; s.textContent = json;
+    var body = clone.querySelector('body') || clone;
+    body.insertBefore(s, body.querySelector('script')); }
+  return '<!doctype html>\n' + clone.outerHTML; }
+window.__annoBuild = buildStandalone;
+document.getElementById('annoDown').addEventListener('click', function(){
+  var out = buildStandalone();
+  var blob = new Blob([out], { type: 'text/html' });
+  var u = URL.createObjectURL(blob), el2 = document.createElement('a');
+  el2.href = u; el2.download = NAME.replace(/\.html?$/i, '').replace(/_(標記版|annotated)$/i, '') + T.sfxAnno + '.html';
+  el2.click(); URL.revokeObjectURL(u);
+  /* 額外說明檔案為何變大 + 下一步怎麼做(實測有人看到 2KB→97KB 以為壞了、也有人不敢傳出去) */
+  savedToast(el2.download, out.length, T.sfxAnnoNote); });
+
+/* 觸控裝置(手機/平板)沒有 mouseup:用選取變化(去抖動)來顯示顏色列 */
+var coarse = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+var selTimer = null;
+document.addEventListener('selectionchange', function(){
+  var s = window.getSelection();
+  if(!s.rangeCount || s.isCollapsed){ bar.hidden = true; return; }
+  if(coarse && !editing){ clearTimeout(selTimer); selTimer = setTimeout(showBarForSelection, 350); } });
+window.addEventListener('scroll', function(){
+  if(bar.hidden) return;
+  var s = window.getSelection();
+  if(!s.rangeCount || s.isCollapsed){ bar.hidden = true; return; }
+  var rect = s.getRangeAt(0).getBoundingClientRect();
+  if(rect.bottom < 0 || rect.top > window.innerHeight){ bar.hidden = true; return; }
+  var x = Math.min(Math.max(8, rect.left + rect.width/2 - bar.offsetWidth/2), window.innerWidth - bar.offsetWidth - 8);
+  var y = rect.top - 44; if(y < 8) y = rect.bottom + 8;
+  bar.style.left = x + 'px'; bar.style.top = y + 'px';
+}, true);
+document.addEventListener('keydown', function(e){
+  /* Esc 分層關閉:一次只收最上層,不要把整個面板一起關掉(實測有人因此得重新打開面板、找回原本位置) */
+  if(e.key === 'Escape'){
+    bar.hidden = true;
+    if(!legendMenu.hidden || !exportMenu.hidden || !aiMenu.hidden){ legendMenu.hidden = true; exportMenu.hidden = true; aiMenu.hidden = true; return; }
+    if(!promptOverlay.hidden){ promptOverlay.hidden = true; return; }
+    if(!diffOverlay.hidden){ diffOverlay.hidden = true; return; }
+    if(!pop.hidden){ closePop(); return; }
+    panel.hidden = true; } });
+
+var UIKEY = 'annoReader::panelSize';
+try{ var ui = JSON.parse(localStorage.getItem(UIKEY) || '{}');
+  if(ui.w) panel.style.width = ui.w + 'px';
+  if(ui.h){ panel.style.height = ui.h + 'px'; panel.style.maxHeight = 'none'; } }catch(e){}
+document.getElementById('annoResize').addEventListener('mousedown', function(e){
+  e.preventDefault();
+  var sx = e.clientX, sy = e.clientY, sw = panel.offsetWidth, sh = panel.offsetHeight;
+  function mv(ev){
+    var w = Math.min(Math.max(260, sw + (sx - ev.clientX)), window.innerWidth - 40);
+    var h = Math.min(Math.max(180, sh + (sy - ev.clientY)), window.innerHeight - 90);
+    panel.style.width = w + 'px'; panel.style.height = h + 'px'; panel.style.maxHeight = 'none'; }
+  function up(){
+    document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up);
+    try{ localStorage.setItem(UIKEY, JSON.stringify({ w: panel.offsetWidth, h: panel.offsetHeight })); }catch(e){} }
+  document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up); });
+
+applyI18n();
+/* 語言鈕:在閱讀器裡由外層頂欄提供,面板這顆隱藏以免重複;獨立開啟含標記版時(無外層)才顯示。
+   每次載入都明確設定,避免含標記版把閱讀器裡的 display:none 一起烙進去。 */
+var hasShell = false; try{ hasShell = window.parent !== window && !!window.parent.__scopeSetLang; }catch(e){}
+document.getElementById('annoLang').style.display = hasShell ? 'none' : '';
+/* JS 有在跑 → 互動功能接管,收掉給無 JS 環境看的靜態附錄與編號 */
+document.querySelectorAll('#annoStaticApp,.annoPrintNo').forEach(function(el){ el.remove(); });
+renderAll();
+}
+
+/* ================= 閱讀器本體 ================= */
+(function(){
+var VER = 'v3.8';
+var RECENTS_KEY = 'annoReader::recents';
+var DOC_PREFIX = 'annoReader::doc::';
+var LANG_KEY = 'annoReader::lang';
+var MAX_RECENTS = 12, MAX_CONTENT = 1500000;
+var view = document.getElementById('view');
+var current = null; /* {key, name, cleanHTML} */
+
+/* ---- 外殼雙語字典(引擎有自己的一份,兩邊靠 annoReader::lang 同步) ---- */
+var SHELL_I18N = {
+ zh: {
+  hl:'zh-Hant', title:'HTMLScope · HTML 標註閱讀器', sub:'HTML 標註閱讀器',
+  home:'🏠 回列表', open:'📂 開啟 HTML', save:'⬇ 下載含標記版',
+  tHome:'回到檔案列表(你的標記都會保留)', tOpen:'打開一個 HTML 檔案來閱讀和標註', tEdit:'直接修改文件裡的文字內容', tSave:'把文件和你的標記打包成一個檔,可傳給別人',
+  lang:'🌐 EN', langTitle:'Switch to English',
+  dropBig:'把 HTML 檔案拖到這裡', dropSub:'或點一下選擇檔案',
+  btnPaste:'✍ 直接貼上文字', btnHowto:'我手上沒有 HTML 檔?',
+  pasteTitle:'貼上文字或 HTML',
+  pasteDesc:'不用先轉檔 —— 從 Word、Google 文件、PDF、email 或任何地方複製內容貼進來就能開始標註。貼純文字會自動排版成一份文件;貼 HTML 原始碼則直接照原樣顯示。',
+  pasteNameLab:'文件名稱', pasteNamePh:'例如:7月例會記錄(留空就用開頭文字當標題)',
+  pastePh:'把內容貼在這裡…',
+  pasteCancel:'取消', pasteGo:'開始標註',
+  pasteErrEmpty:'請先貼上一些內容。', pasteFallbackTitle:'未命名文件',
+  howtoTitle:'怎麼把手上的檔案變成 HTML?',
+  howtoWord:'Word', howtoWordD:'另存新檔 → 存檔類型選「網頁 (*.htm, *.html)」',
+  howtoGdoc:'Google 文件', howtoGdocD:'檔案 → 下載 → 網頁 (.html,已壓縮),解壓縮後取用裡面的 .html',
+  howtoPdf:'PDF', howtoPdfD:'用 Word 開啟 PDF 再另存為網頁;或直接把內文複製起來用上面的「✍ 直接貼上文字」',
+  howtoAi:'AI 產出的報告', howtoAiD:'請 AI「輸出成一個完整的 HTML 檔」;Claude／ChatGPT 產生的成品通常也能直接下載成 .html',
+  howtoWeb:'網頁', howtoWebD:'在瀏覽器按 Ctrl+S,存檔類型選「網頁,單一檔案」',
+  howtoTip:'最快的方式:不用管轉檔,直接用「✍ 直接貼上文字」把內容貼進來就能開始。',
+  recents:'最近開啟', tooBig:'（檔案過大未快取，請重新開檔）',
+  delTitle:'從列表移除（標註資料一併刪除）',
+  confirmRemove:'移除「{name}」？其標註資料（{n} 筆）也會刪除。',
+  reopenAlert:'這份文件當時太大沒有快取，請重新選擇檔案開啟。',
+  htmlOnly:'請選擇 HTML 檔案（.html / .htm）',
+  tips:
+   '<p><b>核心用法就兩步：</b>選取文字 → 挑一個顏色，就能順手寫留言。下面兩張圖看完就會用了，其他功能需要時再展開。</p>'+
+   '<div class="g30">30 秒看懂</div>'+
+   '<div class="ug-flow">'+'<div class="ug-box ug-doc">…先前文字<mark>選取的文字</mark>後續文字…</div>'+'<span class="ug-arrow">→</span>'+'<div class="ug-box ug-bar"><i class="ug-dot" style="background:#f2c414"></i><i class="ug-dot" style="background:#e4574a"></i><i class="ug-dot" style="background:#3cb878"></i><i class="ug-dot" style="background:#4a90e2"></i></div>'+'<span class="ug-arrow">→</span>'+'<div class="ug-box ug-pop"><div class="ug-q">「選取的文字」</div><div class="ug-ta"></div><span class="ug-sendbtn">送出</span></div>'+'</div>'+'<div class="ug-cap">① 選取文字 → 挑一個顏色 → 視窗跳出，填名字、寫下留言</div>'+
+   '<div class="ug-flow ug-flow2">'+'<div class="ug-box ug-person"><div class="ug-who">你</div><div class="ug-fico">📄🖍</div></div>'+'<span class="ug-arrow">⬇ 含標記版<br>傳出</span>'+'<div class="ug-box ug-person"><div class="ug-who">同事</div><div class="ug-fico">📄🖍💬</div></div>'+'<span class="ug-arrow">⬇ 含標記版<br>傳回</span>'+'<div class="ug-box ug-person ug-merge"><div class="ug-who">合併後</div><div class="ug-fico">📄🖍🖍💬</div></div>'+'</div>'+'<div class="ug-cap">② 傳給對方 → 他直接打開回覆 → 傳回來，兩邊的留言自動合併，誰的都不會被蓋掉</div>'+
+   '<details>'+
+   '<summary>📖 基本操作 <span class="cnt">開檔、標記、留言、傳給對方</span></summary><ul>'+
+   '<li><b>開檔</b>：把 HTML 檔拖進虛線框（或點框選檔）。手上沒有 HTML 檔？用「✍ 直接貼上文字」把 Word／Google 文件／PDF 的內容貼進來就好</li>'+
+   '<li><b>看過的文件</b>會列在「最近開啟」，點一下繼續，標記都在</li>'+
+   '<li><b>劃螢光筆</b>：選取文字 → 點顏色（重點／有問題／已確認／補充說明）</li>'+
+   '<li><b>寫留言</b>：小視窗裡先填「你是：」再輸入文字按「送出」；每則留言都有署名＋時間，對方才看得出是誰寫的</li>'+
+   '<li><b>回覆別人</b>：點那條螢光標記 → 看到整串對話 → 輸入回覆「送出」，可一直接續</li>'+
+   '<li><b>問題處理完</b>：按「✓ 解決」標記變淡、清單打勾（可「↩ 重新開啟」）</li>'+
+   '<li><b>改顏色／刪除</b>：點標記後在小視窗操作；視窗擋到字時，按住頂端「⠿ 可拖曳」移開。按 ✕、Esc 或點空白處收起</li>'+
+   '<li><b>傳給對方</b>：按「⬇ 含標記版」產生一個新 HTML 檔傳出去。對方不用安裝任何東西，直接打開就看得到標記、也能回覆；他傳回來你打開，兩邊留言自動合併</li>'+
+   '<li><b>清單面板</b>（右下角 🖍，會顯示未解決數）：可搜尋、按顏色或「未解決」篩選，點任一筆跳到該位置；左上角可拖曳調大小</li></ul>'+
+   '</details>'+
+   '<details>'+
+   '<summary>⚙️ 進階功能 <span class="cnt">建議修改、給 AI 的修改指令、匯出、比較版本</span></summary><ul>'+
+   '<li><b>💡 提議改成…（提議，不會馬上改掉）</b>：點標記 →「💡 提議改成…」→ 打你認為該改成的字 →「儲存建議」。會用刪除線／底線標出改了哪幾個字。要真的替換得按「✓ 接受(套用)」，套用後原文會記在留言裡、隨時可「↩ 還原成原文」</li>'+
+   '<li><b>✏️ 直接改字（直接改掉，立刻生效）</b>：面板裡的「✏️ 直接改字」，改完按「✔ 完成修改」。適合修錯字；要跟人討論的修改請用上面的「💡 提議改成…」</li>'+
+   '<li><b>🤖 修改指令</b>：把所有未解決的標註整理成一段話，貼給 Claude／GPT／Cursor 讓它照著改文件。記得連同你的 HTML 檔一起給 AI，或勾「含文件全文」把全文附進來</li>'+
+   '<li><b>🤖 比較版本</b>：AI 改完傳回來後，用這個看它這一輪到底改了哪裡（紅色刪除線＝舊的、綠色底線＝新的）</li>'+
+   '<li><b>📤 匯出</b>：🖨 列印／存成 PDF（整份文件＋標記編號＋文末註解對照表）／📄 一頁標註清單（只有標註，貼會議紀錄用）／Markdown／JSON</li>'+
+   '<li><b>🎨 顏色</b>：切換四色代表的意思（一般審閱／AI 報告審閱／自訂）。已經標好的標註會保留當初的分類不變，只有之後新標的才用新意義</li>'+
+   '<li><b>👤 名稱</b>｜<b>🌐</b> 切換中英文介面（你的留言內容不會被翻譯）</li></ul>'+
+   '</details>'+
+   '<details>'+
+   '<summary>🔧 疑難與細節 <span class="cnt">標記跑掉了？換電腦？手機能看嗎？</span></summary><ul>'+
+   '<li><b>看到「⚠ 這段原文已被改動」</b>：表示那段文字被你或 AI 改過，所以標記接不回原本的位置。<b>你的留言完全沒有不見</b>，只是位置對不上；想重新標的話，選取新的文字再標一次就好</li>'+
+   '<li><b>看到「≈」符號</b>：原文被改寫過，系統依前後文幫你找回大概的位置，請確認標對了沒有</li>'+
+   '<li><b>文件小幅修改</b>：標記會自動找回原本的位置，不用重標</li>'+
+   '<li><b>換電腦／換瀏覽器</b>：標記存在這台電腦的瀏覽器裡，換裝置請按「⬇ 含標記版」，開那個檔案就能接著用</li>'+
+   '<li><b>安全性</b>：載入的文件會先自動移除裡面的程式碼才顯示，收到來路不明的 HTML 也能安心開</li>'+
+   '<li><b>列印／存 PDF</b>：用「📤 匯出 → 🖨 列印／存成 PDF」（或直接按 Ctrl+P），在列印視窗選「另存為 PDF」就能存檔；標記處會自動加編號、文末附上所有註解</li>'+
+   '<li><b>手機收到含標記版</b>：聊天軟體或信件的預覽視窗不會執行程式，但螢光標記和文末「📝 標註對照表」直接看得到；要回覆或加標，選「用瀏覽器開啟」即可</li>'+
+   '<li><b>圖片沒顯示</b>：文件裡用相對路徑引用的外部圖片不會出現（圖片直接內嵌在檔案裡的 HTML 不受影響）</li></ul>'+
+   '</details>'
+ },
+ en: {
+  hl:'en', title:'HTMLScope · HTML Annotation Reader', sub:'HTML Annotation Reader',
+  home:'🏠 Back to list', open:'📂 Open HTML', save:'⬇ Annotated copy',
+  tHome:'Back to the file list (your marks are kept)', tOpen:'Open an HTML file to read and annotate', tEdit:'Edit the text inside the document directly', tSave:'Package the document with your marks into one shareable file',
+  lang:'🌐 中文', langTitle:'切換為中文',
+  dropBig:'Drop an HTML file here', dropSub:'or click to browse',
+  btnPaste:'✍ Paste text instead', btnHowto:'I don\'t have an HTML file',
+  pasteTitle:'Paste text or HTML',
+  pasteDesc:'No conversion needed — copy content from Word, Google Docs, a PDF, an email, anywhere, and paste it here to start annotating. Plain text is laid out as a document automatically; pasted HTML is shown as-is.',
+  pasteNameLab:'Document name', pasteNamePh:'e.g. July meeting notes (leave blank to use the opening text)',
+  pastePh:'Paste your content here…',
+  pasteCancel:'Cancel', pasteGo:'Start annotating',
+  pasteErrEmpty:'Paste some content first.', pasteFallbackTitle:'Untitled document',
+  howtoTitle:'How do I turn my file into HTML?',
+  howtoWord:'Word', howtoWordD:'Save As → choose “Web Page (*.htm, *.html)”',
+  howtoGdoc:'Google Docs', howtoGdocD:'File → Download → Web Page (.html, zipped), then unzip and use the .html inside',
+  howtoPdf:'PDF', howtoPdfD:'Open the PDF in Word and save as a web page — or just copy the text and use “✍ Paste text instead” above',
+  howtoAi:'An AI-written report', howtoAiD:'Ask the AI to “output this as one complete HTML file”; Claude / ChatGPT results can usually be downloaded as .html directly',
+  howtoWeb:'A web page', howtoWebD:'Press Ctrl+S in your browser and choose “Web Page, Single File”',
+  howtoTip:'Fastest route: skip conversion entirely — use “✍ Paste text instead” and paste your content straight in.',
+  recents:'Recently opened', tooBig:'(too large to cache — please re-open the file)',
+  delTitle:'Remove from list (its annotations are deleted too)',
+  confirmRemove:'Remove “{name}”? Its annotations ({n}) will also be deleted.',
+  reopenAlert:'This document was too large to cache — please choose the file again.',
+  htmlOnly:'Please choose an HTML file (.html / .htm)',
+  tips:
+   '<p><b>The core workflow is two steps:</b> select text \u2192 pick a color, then write a comment. The two pictures below are all you need \u2014 expand the rest only when you want it.</p>'+
+   '<div class="g30">Understand it in 30 seconds</div>'+
+   '<div class="ug-flow">'+'<div class="ug-box ug-doc">…preceding text<mark>the selected text</mark>following text…</div>'+'<span class="ug-arrow">→</span>'+'<div class="ug-box ug-bar"><i class="ug-dot" style="background:#f2c414"></i><i class="ug-dot" style="background:#e4574a"></i><i class="ug-dot" style="background:#3cb878"></i><i class="ug-dot" style="background:#4a90e2"></i></div>'+'<span class="ug-arrow">→</span>'+'<div class="ug-box ug-pop"><div class="ug-q">“the selected text”</div><div class="ug-ta"></div><span class="ug-sendbtn">Send</span></div>'+'</div>'+'<div class="ug-cap">① Select text → pick a color → a popup appears: put your name in, write a comment</div>'+
+   '<div class="ug-flow ug-flow2">'+'<div class="ug-box ug-person"><div class="ug-who">You</div><div class="ug-fico">📄🖍</div></div>'+'<span class="ug-arrow">⬇ Annotated copy<br>send</span>'+'<div class="ug-box ug-person"><div class="ug-who">Colleague</div><div class="ug-fico">📄🖍💬</div></div>'+'<span class="ug-arrow">⬇ Annotated copy<br>send back</span>'+'<div class="ug-box ug-person ug-merge"><div class="ug-who">Merged</div><div class="ug-fico">📄🖍🖍💬</div></div>'+'</div>'+'<div class="ug-cap">② Send it over → they open it and reply → send it back: both sides\u2019 comments merge, nobody\u2019s get overwritten</div>'+
+   '<details>'+
+   '<summary>\ud83d\udcd6 The basics <span class="cnt">opening files, highlighting, commenting, handing off</span></summary><ul>'+
+   '<li><b>Open a file</b>: drag an HTML file into the dashed box (or click it to browse). No HTML file? Use \u201c\u270d Paste text instead\u201d and paste content from Word / Google Docs / a PDF</li>'+
+   '<li><b>Documents you have opened</b> are listed under \u201cRecently opened\u201d \u2014 click one to continue, annotations intact</li>'+
+   '<li><b>Highlight</b>: select text \u2192 pick a color (Key point / Issue / Confirmed / Note)</li>'+
+   '<li><b>Write a comment</b>: fill in \u201cYou are:\u201d in the popup, type, and press \u201cSend\u201d. Every message carries a name and timestamp so people can tell who wrote it</li>'+
+   '<li><b>Reply</b>: click a highlight \u2192 read the thread \u2192 type a reply and \u201cSend\u201d, as many rounds as needed</li>'+
+   '<li><b>Issue handled</b>: press \u201c\u2713 Resolve\u201d \u2014 the highlight fades and the list shows a check (can \u201c\u21a9 Reopen\u201d)</li>'+
+   '<li><b>Recolor / delete</b>: click the highlight and use the popup; if it covers text, hold \u201c\u283f Drag\u201d to move it. Close with \u2715, Esc, or by clicking elsewhere</li>'+
+   '<li><b>Hand it off</b>: press \u201c\u2b07 Annotated copy\u201d to get a new HTML file. The recipient installs nothing \u2014 they just open it, see the highlights and reply; when it comes back, both sides\u2019 comments merge automatically</li>'+
+   '<li><b>List panel</b> (\ud83d\udd8d bottom-right, shows the open count): search, filter by color or \u201cOpen\u201d, click any item to jump to it; drag the top-left corner to resize</li></ul>'+
+   '</details>'+
+   '<details>'+
+   '<summary>\u2699\ufe0f Advanced <span class="cnt">suggested edits, AI revision prompt, export, version compare</span></summary><ul>'+
+   '<li><b>\ud83d\udca1 Suggest a change\u2026 (a proposal \u2014 nothing changes yet)</b>: click a highlight \u2192 \u201c\ud83d\udca1 Suggest a change\u2026\u201d \u2192 type what it should say \u2192 \u201cSave suggestion\u201d. Changed words are shown with strikethrough / underline. It only replaces the text once you press \u201c\u2713 Accept (apply)\u201d, and the original is kept in the comments so you can \u201c\u21a9 Restore original\u201d at any time</li>'+
+   '<li><b>\u270f\ufe0f Edit directly (I change it myself, effective immediately)</b>: \u201c\u270f\ufe0f Edit directly\u201d in the panel, then \u201c\u2714 Done editing\u201d. Good for typos; for changes you want to discuss, use \u201c\ud83d\udca1 Suggest a change\u2026\u201d above</li>'+
+   '<li><b>\ud83e\udd16 Revision prompt</b>: turns every open annotation into one instruction to paste into Claude / GPT / Cursor. Remember to give the AI your HTML file too, or tick \u201cInclude full document\u201d to append the text</li>'+
+   '<li><b>\ud83e\udd16 Compare versions</b>: after the AI sends its revision back, use this to see exactly what changed this round (red strikethrough = old, green underline = new)</li>'+
+   '<li><b>\ud83d\udce4 Export</b>: \ud83d\udda8 Print / Save as PDF (the whole document with numbered highlights and a comment table) / \ud83d\udcc4 one-page annotation list (annotations only \u2014 for meeting notes) / Markdown / JSON</li>'+
+   '<li><b>\ud83c\udfa8 Colors</b>: switch what the four colors mean (general review / AI report review / custom). Existing annotations keep the category they were created with \u2014 only new ones use the new meanings</li>'+
+   '<li><b>\ud83d\udc64 Name</b> and <b>\ud83c\udf10</b> switch interface language (your comment text is never translated)</li></ul>'+
+   '</details>'+
+   '<details>'+
+   '<summary>\ud83d\udd27 Troubleshooting <span class="cnt">highlight moved? switching computers? does it work on a phone?</span></summary><ul>'+
+   '<li><b>\u201c\u26a0 This passage was edited\u201d</b>: that text was changed \u2014 by you or an AI \u2014 so the highlight can no longer find its original spot. <b>Your comments are not lost</b>; to re-anchor it, just select the new text and mark it again</li>'+
+   '<li><b>An \u201c\u2248\u201d symbol</b>: the original was reworded, so the location was recovered approximately from the surrounding context \u2014 worth a quick check</li>'+
+   '<li><b>Minor document revisions</b>: highlights re-anchor themselves automatically, no need to redo them</li>'+
+   '<li><b>Switching computers or browsers</b>: annotations live in this browser \u2014 press \u201c\u2b07 Annotated copy\u201d and open that file on the other machine to continue</li>'+
+   '<li><b>Safety</b>: loaded documents are stripped of scripts before they render, so HTML from unknown sources is safe to open</li>'+
+   '<li><b>Printing / saving as PDF</b>: use \u201c\ud83d\udce4 Export \u2192 \ud83d\udda8 Print / Save as PDF\u201d (or just press Ctrl+P) and pick \u201cSave as PDF\u201d as the destination; highlights are numbered automatically and every comment is appended at the end</li>'+
+   '<li><b>Receiving an annotated copy on a phone</b>: preview windows in chat apps and mail do not run scripts, but the highlights and the \u201c\ud83d\udcdd Annotation table\u201d at the end are still visible; to reply or annotate, choose \u201cOpen in browser\u201d</li>'+
+   '<li><b>Images missing</b>: images referenced by relative paths will not appear (HTML with images embedded directly in the file is unaffected)</li></ul>'+
+   '</details>'
+ }
+};
+function SF(s, v){ return s.replace(/\{(\w+)\}/g, function(_, k){ return v[k]; }); }
+function getLang(){
+  var l = null; try{ l = localStorage.getItem(LANG_KEY); }catch(e){}
+  if(l === 'zh' || l === 'en') return l;
+  return ((navigator.language || '').toLowerCase().indexOf('zh') === 0) ? 'zh' : 'en'; }
+var SL = getLang(), ST = SHELL_I18N[SL];
+function applyShellLang(){
+  document.title = ST.title;
+  document.documentElement.lang = ST.hl;
+  document.getElementById('logoSub').textContent = ST.sub + ' · ' + VER;
+  var bh = document.getElementById('btnHome'); bh.textContent = ST.home; bh.title = ST.tHome;
+  var bo = document.getElementById('btnOpen'); bo.textContent = ST.open; bo.title = ST.tOpen;
+  var bl = document.getElementById('btnLang'); bl.textContent = ST.lang; bl.title = ST.langTitle;
+  document.getElementById('dropBig').textContent = ST.dropBig;
+  document.getElementById('dropSub').textContent = ST.dropSub;
+  document.getElementById('tips').innerHTML = ST.tips;
+  /* 「我沒有 HTML 檔」入口與轉檔說明 */
+  document.getElementById('btnPaste').textContent = ST.btnPaste;
+  document.getElementById('btnHowto').textContent = ST.btnHowto;
+  document.getElementById('howto').innerHTML =
+    '<h4>' + ST.howtoTitle + '</h4><dl>' +
+    '<dt>' + ST.howtoWord + '</dt><dd>' + ST.howtoWordD + '</dd>' +
+    '<dt>' + ST.howtoGdoc + '</dt><dd>' + ST.howtoGdocD + '</dd>' +
+    '<dt>' + ST.howtoPdf + '</dt><dd>' + ST.howtoPdfD + '</dd>' +
+    '<dt>' + ST.howtoAi + '</dt><dd>' + ST.howtoAiD + '</dd>' +
+    '<dt>' + ST.howtoWeb + '</dt><dd>' + ST.howtoWebD + '</dd>' +
+    '</dl><div class="tip">💡 ' + ST.howtoTip + '</div>';
+  var pv = document.getElementById('pasteOv');
+  pv.querySelector('.ptitle').textContent = ST.pasteTitle;
+  pv.querySelector('.pdesc').textContent = ST.pasteDesc;
+  pv.querySelector('.pttllab').textContent = ST.pasteNameLab;
+  document.getElementById('pasteName').placeholder = ST.pasteNamePh;
+  document.getElementById('pasteTA').placeholder = ST.pastePh;
+  pv.querySelector('.pcancel').textContent = ST.pasteCancel;
+  pv.querySelector('.pgo').textContent = ST.pasteGo;
+  renderRecents(); }
+/* 語言切換入口:外殼按鈕或文件內引擎的 🌐,兩邊互相通知(fromEngine 防止循環) */
+window.__scopeSetLang = function(l, fromEngine){
+  if(l !== 'zh' && l !== 'en') return;
+  SL = l; ST = SHELL_I18N[SL];
+  try{ localStorage.setItem(LANG_KEY, l); }catch(e){}
+  applyShellLang();
+  if(!fromEngine){ try{
+    var w = view.contentWindow;
+    if(w && w.__annoSetLang) w.__annoSetLang(l, true);
+  }catch(e){} } };
+document.getElementById('btnLang').addEventListener('click', function(){
+  window.__scopeSetLang(SL === 'zh' ? 'en' : 'zh'); });
+
+function hash(s){ var h = 5381, i = s.length; while(i) h = (h * 33) ^ s.charCodeAt(--i); return (h >>> 0).toString(36); }
+/* 用文件標題當索引:來回傳遞時檔名會變(加「_標記版」),但標題不變,標記才能一路接得上 */
+function docKey(name, doc){ return 'anno::' + hash(doc.title || name); }
+
+function getRecents(){ try{ return JSON.parse(localStorage.getItem(RECENTS_KEY) || '[]'); }catch(e){ return []; } }
+function setRecents(r){ try{ localStorage.setItem(RECENTS_KEY, JSON.stringify(r)); }catch(e){} }
+
+/* 清理文件:移除 script、事件屬性、javascript: 連結、殘留的舊標註介面 */
+function cleanDocument(html){
+  var doc = new DOMParser().parseFromString(html, 'text/html');
+  /* 內嵌的標記資料(純 JSON,不會執行)保留,交給引擎合併;其餘 script 全部移除 */
+  doc.querySelectorAll('script').forEach(function(s){
+    if(s.id === 'annoPreset' && s.type === 'application/json') return;
+    s.remove(); });
+  /* 文件若帶著舊版標註功能的 CSS(如分配書 v6.3 內建版),會跟注入的新引擎樣式打架 → 把那些規則拆掉 */
+  doc.querySelectorAll('style').forEach(function(st){
+    if(st.textContent.indexOf('#annoBar') < 0) return;
+    var re = /(^|})\s*[^{}]*(?:#anno|mark\.anno|\.ap-|\.bdot|\.fdot|button\.c-[yrgb]|\.dot\.c-[yrgb])[^{}]*\{[^}]*\}/g;
+    var t = st.textContent, prev;
+    do{ prev = t; t = t.replace(re, '$1'); }while(t !== prev); /* 相鄰規則共用 } 邊界,要反覆掃到沒東西可刪 */
+    st.textContent = t; });
+  ['annoBar','annoPop','annoPanel','annoToggle','annoFile','annoResize','annoPrintApp','annoStaticApp','annoPromptOverlay','annoDiffOverlay','annoLegendMenu','annoExportMenu','annoAiMenu','annoToast'].forEach(function(id){
+    var el = doc.getElementById(id); if(el) el.remove(); });
+  doc.querySelectorAll('.annoPrintNo').forEach(function(el){ el.remove(); });
+  doc.querySelectorAll('*').forEach(function(el){
+    Array.prototype.slice.call(el.attributes).forEach(function(at){
+      if(/^on/i.test(at.name)) el.removeAttribute(at.name);
+      if((at.name === 'href' || at.name === 'src') && /^\s*javascript:/i.test(at.value)) el.removeAttribute(at.name); }); });
+  return { doc: doc };
+}
+
+function buildInjection(key, name){
+  return '<style>' + ENGINE_CSS + '</style>' + ENGINE_UI +
+    '<scr' + 'ipt>window.__ANNO_KEY=' + JSON.stringify(key) + ';window.__ANNO_NAME=' + JSON.stringify(name) + '</scr' + 'ipt>' +
+    '<scr' + 'ipt>(' + ENGINE.toString() + ')()</scr' + 'ipt>';
+}
+
+function loadDoc(name, html){
+  var c = cleanDocument(html);
+  var key = docKey(name, c.doc);
+  /* 分配書 v6.3 檔案內建標註功能存的舊標記 → 自動搬進閱讀器(同瀏覽器才搬得到;逐筆比對不重複,尊重刪除紀錄) */
+  try{
+    var legacy = localStorage.getItem('agenthub-anno-v6.3');
+    if(legacy && /工作總分配書/.test(c.doc.title || '')){
+      var la = JSON.parse(legacy) || [];
+      if(la.length){
+        var cur = []; try{ cur = JSON.parse(localStorage.getItem(key) || '[]'); }catch(e){}
+        var dead = {}; try{ (JSON.parse(localStorage.getItem(key + '::del') || '[]')).forEach(function(i){ dead[i] = 1; }); }catch(e){}
+        var ids = {}; cur.forEach(function(a){ ids[a.id] = 1; });
+        var added = 0;
+        la.forEach(function(a){ if(a && a.quote != null && !ids[a.id] && !dead[a.id]){ cur.push(a); added++; } });
+        if(added){ localStorage.setItem(key, JSON.stringify(cur)); }
+      }
+    }
+  }catch(e){}
+  var cleanHTML = '<!doctype html>\n' + c.doc.documentElement.outerHTML;
+  current = { key: key, name: name, cleanHTML: cleanHTML };
+  /* 寫入 iframe 並注入標註引擎 */
+  var writeHTML = /<\/body>/i.test(cleanHTML)
+    ? cleanHTML.replace(/<\/body>/i, buildInjection(key, name) + '</body>')
+    : cleanHTML + buildInjection(key, name);
+  var idoc = view.contentDocument;
+  idoc.open(); idoc.write(writeHTML); idoc.close();
+  document.body.classList.add('reading');
+  document.getElementById('docName').textContent = name;
+  document.getElementById('btnHome').hidden = false;
+  saveRecent(name, key, html);
+}
+
+function saveRecent(name, key, html){
+  var r = getRecents().filter(function(x){ return x.key !== key; });
+  var hasContent = html.length <= MAX_CONTENT;
+  r.unshift({ key: key, name: name, ts: Date.now(), hasContent: hasContent });
+  while(r.length > MAX_RECENTS){
+    var old = r.pop();
+    try{ localStorage.removeItem(DOC_PREFIX + old.key); }catch(e){}
+  }
+  if(hasContent){ try{ localStorage.setItem(DOC_PREFIX + key, html); }catch(e){
+    r[0].hasContent = false; try{ localStorage.removeItem(DOC_PREFIX + key); }catch(e2){} } }
+  setRecents(r);
+  renderRecents();
+}
+
+function renderRecents(){
+  var box = document.getElementById('recents');
+  var r = getRecents();
+  box.innerHTML = '';
+  if(!r.length) return;
+  var h = document.createElement('h3'); h.textContent = ST.recents; box.appendChild(h);
+  r.forEach(function(item){
+    var d = document.createElement('div'); d.className = 'rec';
+    var nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = item.name; d.appendChild(nm);
+    var annoCount = 0;
+    try{ annoCount = (JSON.parse(localStorage.getItem(item.key) || '[]')).length; }catch(e){}
+    var meta = document.createElement('span'); meta.className = 'meta';
+    meta.textContent = '🖍 ' + annoCount + ' · ' + new Date(item.ts).toLocaleDateString();
+    d.appendChild(meta);
+    if(!item.hasContent){
+      var nf = document.createElement('span'); nf.className = 'nofile'; nf.textContent = ST.tooBig; d.appendChild(nf); }
+    var del = document.createElement('button'); del.className = 'del'; del.textContent = '✕'; del.title = ST.delTitle;
+    del.addEventListener('click', function(e){
+      e.stopPropagation();
+      if(!confirm(SF(ST.confirmRemove, { name: item.name, n: annoCount }))) return;
+      try{ localStorage.removeItem(DOC_PREFIX + item.key); localStorage.removeItem(item.key); }catch(e2){}
+      setRecents(getRecents().filter(function(x){ return x.key !== item.key; }));
+      renderRecents(); });
+    d.appendChild(del);
+    d.addEventListener('click', function(){
+      var html = null;
+      try{ html = localStorage.getItem(DOC_PREFIX + item.key); }catch(e){}
+      if(html) loadDoc(item.name, html);
+      else { alert(ST.reopenAlert); pickFile(); } });
+    box.appendChild(d); });
+}
+
+/* 下載含標記版:交給文件內的引擎產出(會帶著文字編輯+標記+圖例) */
+window.__buildAnnotated = function(){
+  var w = view.contentWindow;
+  return (w && w.__annoBuild) ? w.__annoBuild() : null; }; /* 供測試 */
+window.__loadDoc = loadDoc; /* 供測試 */
+
+document.getElementById('btnHome').addEventListener('click', function(){
+  document.body.classList.remove('reading');
+  document.getElementById('docName').textContent = '';
+  document.getElementById('btnHome').hidden = true;
+  current = null;
+  renderRecents(); });
+
+var fi = document.getElementById('fileIn');
+function pickFile(){ fi.click(); }
+document.getElementById('btnOpen').addEventListener('click', pickFile);
+document.getElementById('drop').addEventListener('click', pickFile);
+fi.addEventListener('change', function(){
+  var f = fi.files[0]; if(!f) return;
+  var rd = new FileReader();
+  rd.onload = function(){ loadDoc(f.name, rd.result); };
+  rd.readAsText(f); fi.value = ''; });
+
+var drop = document.getElementById('drop');
+['dragover','dragenter'].forEach(function(ev){
+  document.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add('over'); }); });
+['dragleave','drop'].forEach(function(ev){
+  document.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.remove('over'); }); });
+document.addEventListener('drop', function(e){
+  var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if(!f) return;
+  if(!/\.html?$/i.test(f.name) && f.type !== 'text/html'){ alert(ST.htmlOnly); return; }
+  var rd = new FileReader();
+  rd.onload = function(){ loadDoc(f.name, rd.result); };
+  rd.readAsText(f); });
+
+/* ---- 「我沒有 HTML 檔」:①貼上文字/HTML 直接開始 ②教怎麼從 Word/Google 文件/PDF 轉出 ---- */
+var pasteOv = document.getElementById('pasteOv'), pasteTA = document.getElementById('pasteTA'), pasteName = document.getElementById('pasteName');
+function openPaste(){
+  pasteOv.hidden = false;
+  pasteTA.value = ''; pasteName.value = '';
+  pasteOv.querySelector('.perr').textContent = '';
+  pasteTA.focus(); }
+function closePaste(){ pasteOv.hidden = true; }
+document.getElementById('btnPaste').addEventListener('click', openPaste);
+pasteOv.querySelector('.px').addEventListener('click', closePaste);
+pasteOv.querySelector('.pcancel').addEventListener('click', closePaste);
+pasteOv.addEventListener('click', function(e){ if(e.target === pasteOv) closePaste(); });
+document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && !pasteOv.hidden) closePaste(); });
+document.getElementById('btnHowto').addEventListener('click', function(){
+  var h = document.getElementById('howto'); h.hidden = !h.hidden;
+  if(!h.hidden) h.scrollIntoView({ block:'nearest' }); });
+/* 貼上的內容轉成可標註的文件:看起來像 HTML 就當 HTML,否則把純文字包成段落 */
+function htmlFromPaste(title, raw){
+  var esc = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  var looksHtml = /<\s*(!doctype|html|body|div|p|h[1-6]|table|article|section|ul|ol|span)\b/i.test(raw);
+  if(looksHtml){
+    var out = raw;
+    if(!/<title>/i.test(out)){
+      if(/<head[^>]*>/i.test(out)) out = out.replace(/<head([^>]*)>/i, '<head$1><title>' + esc(title) + '</title>');
+      else out = '<!doctype html><html><head><meta charset="utf-8"><title>' + esc(title) + '</title></head><body>' + out + '</body></html>'; }
+    return out; }
+  var body = raw.split(/\n\s*\n/).map(function(p){
+    return '<p>' + esc(p.trim()).replace(/\n/g, '<br>') + '</p>'; }).join('\n');
+  return '<!doctype html><html><head><meta charset="utf-8"><title>' + esc(title) + '</title>' +
+    '<style>body{max-width:760px;margin:0 auto;padding:36px 22px;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;font-size:15px;line-height:1.9;color:#1c2321}h1,h2,h3{line-height:1.35}</style>' +
+    '</head><body><h1>' + esc(title) + '</h1>' + body + '</body></html>'; }
+pasteOv.querySelector('.pgo').addEventListener('click', function(){
+  var raw = pasteTA.value.trim(), err = pasteOv.querySelector('.perr');
+  if(!raw){ err.textContent = ST.pasteErrEmpty; pasteTA.focus(); return; }
+  var title = pasteName.value.trim();
+  if(!title){                                  /* 沒填標題就用第一行當標題(標題是標記存取的索引,不能空) */
+    title = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40) || ST.pasteFallbackTitle; }
+  closePaste();
+  loadDoc(title + '.html', htmlFromPaste(title, raw)); });
+
+applyShellLang();
+})();
+</script>
+</body>
+</html>

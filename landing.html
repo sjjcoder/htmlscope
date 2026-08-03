@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HTMLScope — annotations that live inside the file</title>
+<meta name="description" content="A single HTML file that lets you highlight, comment on, and review any HTML document — no install, no account, no cloud. Annotations live inside the file and merge automatically when passed around.">
+<meta property="og:title" content="HTMLScope — annotations that live inside the file">
+<meta property="og:description" content="Highlight, comment on and hand around any HTML document — or review what an AI wrote and turn your notes into its next prompt. One file. No install, no account, nothing leaves your machine.">
+<meta property="og:type" content="website">
+<style>
+:root{
+  --ground:#fbfcfb; --surface:#ffffff; --surface-2:#f3f6f5;
+  --ink:#16211f; --ink-2:#4a5b58; --ink-3:#7d8f8b;
+  --line:#e0e7e5; --line-2:#cfd9d6;
+  --accent:#0e7b6c; --accent-ink:#0a5e52; --accent-soft:#e2f0ed;
+  --hl-y:#f2c414; --hl-r:#e4574a; --hl-g:#3cb878; --hl-b:#4a90e2;
+  --shadow:0 1px 2px rgba(20,40,36,.04),0 8px 30px rgba(20,40,36,.07);
+  --shadow-lg:0 2px 6px rgba(20,40,36,.06),0 24px 60px rgba(20,40,36,.12);
+  --mono:ui-monospace,"SF Mono","Cascadia Code","JetBrains Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --ground:#0f1413; --surface:#161d1b; --surface-2:#1c2523;
+    --ink:#e9efed; --ink-2:#a9b8b4; --ink-3:#748480;
+    --line:#28312f; --line-2:#354340;
+    --accent:#3bb89f; --accent-ink:#5fd0b9; --accent-soft:#12302a;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 30px rgba(0,0,0,.4);
+    --shadow-lg:0 2px 6px rgba(0,0,0,.4),0 24px 60px rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="light"]{
+  --ground:#fbfcfb; --surface:#ffffff; --surface-2:#f3f6f5;
+  --ink:#16211f; --ink-2:#4a5b58; --ink-3:#7d8f8b;
+  --line:#e0e7e5; --line-2:#cfd9d6;
+  --accent:#0e7b6c; --accent-ink:#0a5e52; --accent-soft:#e2f0ed;
+  --shadow:0 1px 2px rgba(20,40,36,.04),0 8px 30px rgba(20,40,36,.07);
+  --shadow-lg:0 2px 6px rgba(20,40,36,.06),0 24px 60px rgba(20,40,36,.12);
+}
+:root[data-theme="dark"]{
+  --ground:#0f1413; --surface:#161d1b; --surface-2:#1c2523;
+  --ink:#e9efed; --ink-2:#a9b8b4; --ink-3:#748480;
+  --line:#28312f; --line-2:#354340;
+  --accent:#3bb89f; --accent-ink:#5fd0b9; --accent-soft:#12302a;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 30px rgba(0,0,0,.4);
+  --shadow-lg:0 2px 6px rgba(0,0,0,.4),0 24px 60px rgba(0,0,0,.55);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{
+  background:var(--ground);color:var(--ink);
+  font-family:var(--sans);font-size:17px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  overflow-x:hidden;
+}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+.eyebrow{
+  font-family:var(--mono);font-size:12px;font-weight:600;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--accent);
+}
+h1,h2,h3{line-height:1.08;letter-spacing:-.02em;text-wrap:balance;font-weight:800}
+a{color:inherit}
+.hl{
+  background-image:linear-gradient(var(--c),var(--c));
+  background-repeat:no-repeat;background-position:0 82%;
+  background-size:100% 42%;padding:0 .06em;border-radius:1px;
+}
+.hl.y{--c:rgba(242,196,20,.45)} .hl.r{--c:rgba(228,87,74,.38)}
+.hl.g{--c:rgba(60,184,120,.40)} .hl.b{--c:rgba(74,144,226,.38)}
+
+/* ---------- top bar ---------- */
+header{
+  position:sticky;top:0;z-index:50;
+  background:color-mix(in srgb,var(--ground) 82%,transparent);
+  backdrop-filter:saturate(1.4) blur(12px);
+  border-bottom:1px solid var(--line);
+}
+.nav{display:flex;align-items:center;gap:22px;height:62px}
+.brand{font-family:var(--mono);font-weight:700;font-size:16px;letter-spacing:-.01em;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.brand .sq{width:16px;height:16px;border-radius:3px;background:var(--accent);position:relative;flex:none}
+.brand .sq::after{content:"";position:absolute;left:3px;right:3px;bottom:3px;height:5px;border-radius:1px;background:var(--hl-y)}
+.nav .spring{margin-left:auto}
+.nav a.navlink{font-size:14px;color:var(--ink-2);text-decoration:none;display:none}
+.nav a.navlink:hover{color:var(--ink)}
+@media(min-width:860px){.nav a.navlink{display:inline}}
+@media(max-width:520px){.nav{gap:10px}.nav .btn.primary.sm{display:none}.brand{font-size:15px}}
+.iconbtn{
+  font-family:var(--mono);font-size:12.5px;font-weight:600;
+  background:var(--surface);color:var(--ink-2);border:1px solid var(--line-2);
+  border-radius:8px;padding:7px 11px;cursor:pointer;line-height:1;
+  display:inline-flex;align-items:center;gap:6px;transition:.15s;
+}
+.iconbtn:hover{color:var(--accent);border-color:var(--accent)}
+.btn{
+  font-family:var(--sans);font-size:15px;font-weight:650;
+  border-radius:9px;padding:11px 18px;cursor:pointer;border:1px solid transparent;
+  text-decoration:none;display:inline-flex;align-items:center;gap:8px;
+  transition:transform .12s,filter .15s,background .15s;white-space:nowrap;
+}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.primary:active{transform:translateY(1px)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line-2)}
+.btn.ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn.sm{padding:8px 14px;font-size:14px}
+
+/* ---------- hero ---------- */
+.hero{padding:76px 0 40px;display:grid;gap:54px;grid-template-columns:1fr}
+@media(min-width:960px){.hero{grid-template-columns:1.02fr 1fr;align-items:center;padding:96px 0 64px}}
+.hero h1{font-size:clamp(38px,6vw,62px)}
+.hero .lede{font-size:clamp(18px,2.2vw,21px);color:var(--ink-2);margin-top:22px;max-width:34ch}
+.hero .cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:32px;align-items:center}
+.hero .microcta{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);margin-top:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hero .microcta b{color:var(--ink-2);font-weight:600}
+.dotsep{width:3px;height:3px;border-radius:50%;background:var(--ink-3);display:inline-block}
+
+/* ---------- demo doc ---------- */
+.demo{
+  background:var(--surface);border:1px solid var(--line);border-radius:16px;
+  box-shadow:var(--shadow-lg);overflow:hidden;position:relative;
+}
+.demo .chrome{
+  display:flex;align-items:center;gap:8px;padding:11px 15px;
+  border-bottom:1px solid var(--line);background:var(--surface-2);
+}
+.demo .dot{width:10px;height:10px;border-radius:50%;background:var(--line-2)}
+.demo .fname{font-family:var(--mono);font-size:12px;color:var(--ink-3);margin-left:8px}
+.demo .body{padding:26px 26px 30px;position:relative}
+.demo .rep-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.demo h4{font-size:19px;font-weight:750;letter-spacing:-.01em;margin-bottom:14px}
+.demo p{font-size:14.5px;line-height:1.72;color:var(--ink-2);margin-bottom:12px}
+.demo .mark{cursor:pointer;position:relative}
+.demo .comment{
+  margin-top:16px;background:var(--surface);border:1px solid var(--line-2);
+  border-radius:12px;box-shadow:var(--shadow);padding:12px 14px;
+  max-width:300px;margin-left:auto;position:relative;
+}
+.demo .comment::before{
+  content:"";position:absolute;top:-7px;right:34px;width:12px;height:12px;
+  background:var(--surface);border-left:1px solid var(--line-2);border-top:1px solid var(--line-2);
+  transform:rotate(45deg);
+}
+.demo .comment .who{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-bottom:4px;display:flex;justify-content:space-between}
+.demo .comment .msg{font-size:13.5px;color:var(--ink);line-height:1.55}
+.demo .comment .reply{font-size:13px;color:var(--ink-2);margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.demo .comment .reply .who{color:var(--accent)}
+.demo .toolbar{
+  position:absolute;top:64px;right:22px;display:flex;gap:5px;
+  background:var(--surface);border:1px solid var(--line-2);border-radius:999px;
+  padding:5px 7px;box-shadow:var(--shadow);
+}
+.demo .toolbar span{width:15px;height:15px;border-radius:50%;display:block}
+.sw-y{background:var(--hl-y)} .sw-r{background:var(--hl-r)} .sw-g{background:var(--hl-g)} .sw-b{background:var(--hl-b)}
+/* highlighter draw-in */
+.demo .mark{background-image:linear-gradient(var(--c),var(--c));background-repeat:no-repeat;background-position:0 82%;background-size:0% 42%;border-radius:1px;padding:0 .05em}
+.demo .mark.y{--c:rgba(242,196,20,.5)} .demo .mark.r{--c:rgba(228,87,74,.42)} .demo .mark.g{--c:rgba(60,184,120,.44)}
+.demo.play .mark{animation:stroke .5s cubic-bezier(.6,.02,.3,1) forwards}
+.demo.play .mark.d1{animation-delay:.25s}.demo.play .mark.d2{animation-delay:.6s}.demo.play .mark.d3{animation-delay:.95s}
+.demo .comment{opacity:0;transform:translateY(6px)}
+.demo.play .comment{animation:fade .45s ease forwards .95s}
+@keyframes stroke{to{background-size:100% 42%}}
+@keyframes fade{to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){
+  .demo .mark{background-size:100% 42%!important;animation:none!important}
+  .demo .comment{opacity:1!important;transform:none!important;animation:none!important}
+}
+
+/* ---------- generic section ---------- */
+section{padding:72px 0}
+.sec-head{max-width:56ch;margin-bottom:44px}
+.sec-head h2{font-size:clamp(28px,3.6vw,40px);margin-top:12px}
+.sec-head p{color:var(--ink-2);margin-top:16px;font-size:18px}
+
+/* problem */
+.prob{background:var(--surface-2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.prob-grid{display:grid;gap:18px;grid-template-columns:1fr}
+@media(min-width:760px){.prob-grid{grid-template-columns:repeat(3,1fr)}}
+.prob-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px}
+.prob-card .n{font-family:var(--mono);font-size:12px;color:var(--hl-r);font-weight:700;letter-spacing:.1em}
+.prob-card h3{font-size:18px;margin:12px 0 8px}
+.prob-card p{font-size:14.5px;color:var(--ink-2);line-height:1.6}
+
+/* steps */
+.steps{display:grid;gap:22px;grid-template-columns:1fr;counter-reset:s}
+@media(min-width:820px){.steps{grid-template-columns:repeat(3,1fr)}}
+.step{position:relative;padding-top:26px}
+.step::before{
+  counter-increment:s;content:counter(s,decimal-leading-zero);
+  font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent);
+  letter-spacing:.08em;display:block;margin-bottom:14px;
+}
+.step .bar{height:3px;border-radius:2px;background:var(--line-2);margin-bottom:16px;position:relative;overflow:hidden}
+.step .bar::after{content:"";position:absolute;inset:0 66% 0 0;background:var(--accent);border-radius:2px}
+.step:nth-child(2) .bar::after{inset:0 33% 0 0}
+.step:nth-child(3) .bar::after{inset:0 0 0 0}
+.step h3{font-size:20px;margin-bottom:10px}
+.step p{font-size:15px;color:var(--ink-2)}
+.step code{font-family:var(--mono);font-size:.85em;background:var(--surface-2);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--accent-ink)}
+
+/* ai loop */
+.loop-grid{display:grid;gap:32px;grid-template-columns:1fr;align-items:start;margin-top:8px}
+@media(min-width:900px){.loop-grid{grid-template-columns:.85fr 1.15fr;gap:44px;align-items:center}}
+.loop-steps{display:flex;flex-direction:column;gap:20px}
+.loop-step{display:flex;gap:14px;align-items:flex-start}
+.loop-step .ln{flex:none;width:30px;height:30px;border-radius:9px;background:var(--accent-soft);color:var(--accent);font-family:var(--mono);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center}
+.loop-step h3{font-size:17px;margin-bottom:4px}
+.loop-step p{font-size:14.5px;color:var(--ink-2);line-height:1.55}
+.loop-code{background:var(--ink);border-radius:14px;box-shadow:var(--shadow-lg);overflow:hidden;border:1px solid var(--line);min-width:0}
+.loop-grid>*{min-width:0}
+:root[data-theme="dark"] .loop-code,.loop-code{background:#0c1614}
+.loop-code .chrome{display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08)}
+.loop-code .chrome .fn{font-family:var(--mono);font-size:12px;color:#7f9c95;margin-left:4px}
+.loop-code .chrome .cp{margin-left:auto;font-family:var(--mono);font-size:11px;color:#0c1614;background:var(--hl-g);border-radius:5px;padding:2px 8px;font-weight:700}
+.loop-code pre{margin:0;padding:18px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.7;color:#cfe0db;white-space:pre;-webkit-overflow-scrolling:touch}
+.loop-code .h{color:var(--hl-r);font-weight:700}
+.loop-code .k{color:#7f9c95}
+.loop-code .mk{background:rgba(60,184,120,.22);color:#eaf5f0;border-radius:2px;padding:0 2px}
+/* 定位分層:實測 2 位技術角色對 AI 敘事反應極好(「這個懂我」),但 5 位非技術角色覺得「這不是給我用的」。
+   解法不是弱化 AI(那是護城河),而是在 AI 段落之前先給一個分岔路口,讓每種訪客都先認出自己。 */
+.fork{border-bottom:1px solid var(--line)}
+.fork-grid{display:grid;gap:16px;grid-template-columns:1fr;margin-top:4px}
+@media(min-width:800px){.fork-grid{grid-template-columns:1fr 1fr}}
+.fork-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px;display:flex;flex-direction:column;gap:10px}
+.fork-card.adv{border-color:var(--accent)}
+.fork-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.fork-card h3{font-size:19px;letter-spacing:-.01em}
+.badge-adv{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.fork-card .who{font-size:12.5px;color:var(--ink-3);font-family:var(--mono)}
+.fork-card p{font-size:15px;color:var(--ink-2);line-height:1.65}
+.fork-card ul{list-style:none;display:flex;flex-direction:column;gap:6px;margin-top:2px}
+.fork-card li{font-size:14.5px;color:var(--ink-2);padding-left:20px;position:relative;line-height:1.55}
+.fork-card li::before{content:"→";position:absolute;left:0;color:var(--accent);font-size:13px}
+.fork-note{margin-top:18px;font-size:14.5px;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:14px 17px;line-height:1.65}
+.fork-note b{color:var(--ink)}
+/* 「我沒有 HTML 檔」:實測非技術訪客(文件都在 Word／Google Docs／PDF)看完整頁仍不知道自己能不能用 —— 進門前的第一道牆 */
+.nofile{background:var(--surface-2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.nofile-grid{display:grid;gap:14px;grid-template-columns:1fr;margin-top:6px}
+@media(min-width:720px){.nofile-grid{grid-template-columns:repeat(3,1fr)}}
+.nofile-card{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:20px}
+.nofile-card .src{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.nofile-card p{font-size:14.5px;color:var(--ink-2);line-height:1.6;margin-top:8px}
+.nofile-hero{display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;background:var(--surface);border:1px solid var(--accent);border-radius:13px;padding:20px 22px;margin-top:16px}
+.nofile-hero .lead{font-weight:700;color:var(--ink);font-size:16px}
+.nofile-hero p{color:var(--ink-2);font-size:14.5px;line-height:1.6;flex:1;min-width:240px}
+.loop-presets{display:flex;flex-wrap:wrap;gap:10px;margin-top:34px}
+.loop-chip{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 14px}
+.loop-chip i{width:11px;height:11px;border-radius:50%;flex:none}
+
+/* features */
+.feat{background:var(--surface-2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.feat-grid{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:16px;overflow:hidden;grid-template-columns:1fr}
+@media(min-width:640px){.feat-grid{grid-template-columns:1fr 1fr}}
+@media(min-width:960px){.feat-grid{grid-template-columns:repeat(3,1fr)}}
+.feat-cell{background:var(--surface);padding:26px 24px}
+.feat-cell .ic{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.06em;margin-bottom:12px}
+.feat-cell h3{font-size:16.5px;margin-bottom:7px}
+.feat-cell p{font-size:14px;color:var(--ink-2);line-height:1.58}
+
+/* privacy — the killer angle */
+.priv{position:relative;overflow:hidden}
+.priv .inner{background:var(--ink);color:var(--ground);border-radius:22px;padding:clamp(34px,5vw,64px);position:relative;overflow:hidden}
+:root[data-theme="dark"] .priv .inner,
+.priv .inner{--ground:#fbfcfb}
+.priv .inner{background:linear-gradient(135deg,#12332d,#0c211d)}
+.priv .inner h2{color:#fff;font-size:clamp(26px,3.4vw,38px);max-width:20ch}
+.priv .inner .eyebrow{color:var(--hl-y)}
+.priv .inner p{color:#cfe0db;margin-top:18px;max-width:52ch;font-size:17px}
+.priv .grid{display:grid;gap:18px;margin-top:34px;grid-template-columns:1fr}
+@media(min-width:720px){.priv .grid{grid-template-columns:repeat(3,1fr)}}
+.priv .g{border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:18px 18px 20px;background:rgba(255,255,255,.03)}
+.priv .g .k{font-family:var(--mono);font-size:12px;color:var(--hl-g);font-weight:700;margin-bottom:8px;letter-spacing:.05em}
+.priv .g p{color:#bcd0cb;font-size:13.5px;margin-top:0;line-height:1.55}
+
+/* compare */
+.cmp-table{width:100%;border-collapse:collapse;font-size:15px;overflow:hidden;border-radius:14px;border:1px solid var(--line)}
+.cmp-wrap{overflow-x:auto}
+.cmp-table th,.cmp-table td{text-align:left;padding:15px 18px;border-bottom:1px solid var(--line)}
+.cmp-table thead th{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:700;background:var(--surface-2)}
+.cmp-table thead th.us{color:var(--accent)}
+.cmp-table td:first-child{color:var(--ink-2);font-size:14px}
+.cmp-table td.us{font-weight:650;color:var(--ink)}
+.cmp-table tr:last-child td,.cmp-table tbody tr:last-child td{border-bottom:none}
+.cmp-table .yes{color:var(--accent);font-weight:700}
+.cmp-table .no{color:var(--ink-3)}
+
+/* final cta */
+.final{text-align:center;padding:96px 0}
+.final h2{font-size:clamp(30px,4.5vw,52px);max-width:16ch;margin:16px auto 0}
+.final p{color:var(--ink-2);margin:20px auto 0;max-width:46ch;font-size:18px}
+.final .cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:34px}
+.final .fileline{font-family:var(--mono);font-size:13px;color:var(--ink-3);margin-top:22px}
+
+/* footer */
+footer{border-top:1px solid var(--line);padding:40px 0;color:var(--ink-3);font-size:14px}
+.foot{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}
+.foot .brand{color:var(--ink-2)}
+.foot a{color:var(--ink-3);text-decoration:none;margin-left:18px}
+.foot a:hover{color:var(--accent)}
+
+:focus-visible{outline:2.5px solid var(--accent);outline-offset:2px;border-radius:4px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <nav class="wrap nav">
+    <span class="brand"><span class="sq"></span>HTMLScope</span>
+    <span class="spring"></span>
+    <a class="navlink" href="#fork" data-en="Two ways" data-zh="兩種用法">Two ways</a>
+    <a class="navlink" href="#how" data-en="How it works" data-zh="運作方式">How it works</a>
+    <a class="navlink" href="#nofile" data-en="No HTML file?" data-zh="沒有 HTML 檔?">No HTML file?</a>
+    <a class="navlink" href="#ai-loop" data-en="AI loop" data-zh="AI 閉環">AI loop</a>
+    <a class="navlink" href="#privacy" data-en="Privacy" data-zh="隱私">Privacy</a>
+    <button class="iconbtn" id="lang" title="切換語言 / Switch language">中文</button>
+    <button class="iconbtn" id="theme" title="Toggle theme" aria-label="Toggle theme">◐</button>
+    <a class="btn primary sm" href="#get" data-en="Download" data-zh="下載">Download</a>
+  </nav>
+</header>
+
+<main>
+  <!-- HERO -->
+  <section class="wrap hero" style="padding-top:76px">
+    <div>
+      <p class="eyebrow" data-en="A single HTML file · no install · no account" data-zh="單一 HTML 檔 · 免安裝 · 免帳號">A single HTML file · no install · no account</p>
+      <h1 data-en="Annotations that live inside the file." data-zh="標註,就住在檔案裡。">Annotations that live inside the file.</h1>
+      <p class="lede" data-en="Open any HTML document, highlight it, comment on it, pass it around — and the notes travel with the file. No cloud, no sign-up, nothing to install." data-zh="打開任何 HTML 文件,劃重點、寫註解、傳給別人 — 標記跟著檔案走。不上雲、免註冊、零安裝。">Open any HTML document, highlight it, comment on it, pass it around — and the notes travel with the file. No cloud, no sign-up, nothing to install.</p>
+      <div class="cta">
+        <a class="btn primary" href="#get" data-en="Download the file" data-zh="下載檔案">Download the file</a>
+        <a class="btn ghost" href="#how" data-en="See how it works" data-zh="看它怎麼運作">See how it works</a>
+      </div>
+      <div class="microcta">
+        <b data-en="One file, ~70&nbsp;KB" data-zh="一個檔,約 70&nbsp;KB">One file, ~70&nbsp;KB</b><span class="dotsep"></span>
+        <span data-en="Works offline" data-zh="離線可用">Works offline</span><span class="dotsep"></span>
+        <span data-en="Nothing leaves your machine" data-zh="資料不離開你的電腦">Nothing leaves your machine</span><span class="dotsep"></span>
+        <a href="#nofile" style="color:var(--accent);text-decoration:none;border-bottom:1px dotted var(--accent)" data-en="No HTML file? Paste text instead" data-zh="沒有 HTML 檔?直接貼上文字">No HTML file? Paste text instead</a>
+      </div>
+    </div>
+
+    <!-- interactive-looking demo document -->
+    <div class="demo" id="demo">
+      <div class="chrome">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="fname">Q3_market_report.html</span>
+      </div>
+      <div class="body">
+        <div class="toolbar" aria-hidden="true"><span class="sw-y"></span><span class="sw-r"></span><span class="sw-g"></span><span class="sw-b"></span></div>
+        <div class="rep-eyebrow" data-en="AI-generated report" data-zh="AI 生成報告">AI-generated report</div>
+        <h4 data-en="Q3 Market Outlook" data-zh="第三季市場展望">Q3 Market Outlook</h4>
+        <p><span data-en="Demand recovered across all regions this quarter. " data-zh="本季各區域需求全面回溫。">Demand recovered across all regions this quarter. </span><span class="mark g d1" data-en="Gross margin expanded to 41%" data-zh="毛利率提升至 41%">Gross margin expanded to 41%</span><span data-en=", led by the enterprise segment." data-zh=",由企業客群帶動。">, led by the enterprise segment.</span></p>
+        <p><span data-en="Management expects the trend to continue into Q4, though " data-zh="管理層預期此趨勢將延續至第四季,不過">Management expects the trend to continue into Q4, though </span><span class="mark y d2" data-en="the supply forecast assumes no further disruption" data-zh="供給預測假設不再有中斷">the supply forecast assumes no further disruption</span><span data-en=" — a point worth checking against " data-zh="—— 這點值得對照">— a point worth checking against </span><span class="mark r d3" data-en="the shipping data" data-zh="航運數據">the shipping data</span><span data-en="." data-zh="。">.</span></p>
+        <div class="comment">
+          <div class="who"><span>Wei · reviewer</span><span>10:42</span></div>
+          <div class="msg" data-en="Where does the 41% come from? The appendix says 38%." data-zh="41% 是哪來的?附錄寫的是 38%。">Where does the 41% come from? The appendix says 38%.</div>
+          <div class="reply"><div class="who"><span data-en="You · replied" data-zh="你 · 已回覆">You · replied</span></div><span data-en="Good catch — appendix is pre-adjustment. Fixing." data-zh="抓得好 — 附錄是調整前的數字,馬上改。">Good catch — appendix is pre-adjustment. Fixing.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TWO WAYS (定位分層:讓每種訪客先認出自己) -->
+  <section class="fork" id="fork">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow" data-en="Two ways people use it" data-zh="兩種用法">Two ways people use it</p>
+        <h2 data-en="Pick the one that sounds like you." data-zh="選聽起來像你的那一個就好。">Pick the one that sounds like you.</h2>
+      </div>
+      <div class="fork-grid">
+        <div class="fork-card">
+          <div class="fork-head">
+            <h3 data-en="Review a document with colleagues" data-zh="跟同事一起看一份文件">Review a document with colleagues</h3>
+          </div>
+          <div class="who" data-en="No technical knowledge needed" data-zh="完全不需要懂技術">No technical knowledge needed</div>
+          <p data-en="Highlight what matters, leave comments, send the file over. They open it, reply, send it back — and everyone's notes merge by themselves." data-zh="劃出重點、寫下留言、把檔案傳過去。對方打開、回覆、傳回來 —— 兩邊的意見會自己合併。">Highlight what matters, leave comments, send the file over. They open it, reply, send it back — and everyone's notes merge by themselves.</p>
+          <ul>
+            <li data-en="Meeting notes, drafts, internal announcements" data-zh="會議記錄、草稿、內部公告">Meeting notes, drafts, internal announcements</li>
+            <li data-en="Nothing to install — not even for the person you send it to" data-zh="不用安裝任何東西 —— 收到檔案的人也不用">Nothing to install — not even for the person you send it to</li>
+            <li data-en="Print or save as PDF when you are done" data-zh="標完可以直接列印或存成 PDF">Print or save as PDF when you are done</li>
+          </ul>
+        </div>
+        <div class="fork-card adv">
+          <div class="fork-head">
+            <h3 data-en="Review what an AI wrote" data-zh="審閱 AI 寫的報告">Review what an AI wrote</h3>
+            <span class="badge-adv" data-en="Advanced" data-zh="進階">Advanced</span>
+          </div>
+          <div class="who" data-en="If you work with Claude / GPT / Cursor" data-zh="如果你常跟 Claude／GPT／Cursor 工作">If you work with Claude / GPT / Cursor</div>
+          <p data-en="Mark the problems, then turn every note into one instruction the AI can act on — and see exactly what it changed when the revision comes back." data-zh="標出問題，然後把所有意見變成一段 AI 照得動的指令 —— 改完傳回來，還能看出它究竟動了哪裡。">Mark the problems, then turn every note into one instruction the AI can act on — and see exactly what it changed when the revision comes back.</p>
+          <ul>
+            <li data-en="Fact errors, missing sources, tone — as ready-made categories" data-zh="事實錯誤、缺來源、語氣 —— 現成的分類標籤">Fact errors, missing sources, tone — as ready-made categories</li>
+            <li data-en="One click turns your notes into a revision prompt" data-zh="一鍵把標註變成修改指令">One click turns your notes into a revision prompt</li>
+            <li data-en="Your highlights survive the AI's rewrite and follow the moved text" data-zh="標註能撐過 AI 的改寫，跟著移動後的文字走">Your highlights survive the AI's rewrite and follow the moved text</li>
+          </ul>
+        </div>
+      </div>
+      <div class="fork-note" data-en="Both use the same single file and the same handful of buttons. <b>If the second one is not you, you can ignore it entirely</b> — nothing below is required to get the first one done." data-zh="兩種用的是同一個檔案、同一套按鈕。<b>如果第二種不是你，完全可以直接忽略</b> —— 下面那些不看也能把第一種做完。">Both use the same single file and the same handful of buttons. <b>If the second one is not you, you can ignore it entirely</b> — nothing below is required to get the first one done.</div>
+    </div>
+  </section>
+
+  <!-- PROBLEM -->
+  <section class="prob">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow" data-en="The gap" data-zh="缺口">The gap</p>
+        <h2 data-en="HTML can’t keep comments inside the file the way PDF can." data-zh="HTML 沒辦法像 PDF 那樣把註解存在檔案裡。">HTML can’t keep comments inside the file the way PDF can.</h2>
+        <p data-en="And there is more HTML to review than ever — exported reports, dashboards, meeting notes, and now whatever the AI just wrote. Yet every review tool still asks you for the same three things —" data-zh="而現在需要審閱的 HTML 比以前多得多 —— 匯出的報表、儀表板、會議記錄，還有 AI 剛寫好的東西。可是每個審閱工具都還是要你先交出同樣三件事 —">And there is more HTML to review than ever — exported reports, dashboards, meeting notes, and now whatever the AI just wrote. Yet every review tool still asks you for the same three things —</p>
+      </div>
+      <div class="prob-grid">
+        <div class="prob-card">
+          <div class="n">01</div>
+          <h3 data-en="An account" data-zh="一個帳號">An account</h3>
+          <p data-en="Sign up, invite teammates, manage seats — before a single word gets highlighted." data-zh="註冊、邀請同事、管理席次 — 在劃下第一筆重點之前。">Sign up, invite teammates, manage seats — before a single word gets highlighted.</p>
+        </div>
+        <div class="prob-card">
+          <div class="n">02</div>
+          <h3 data-en="A browser extension" data-zh="一個瀏覽器擴充">A browser extension</h3>
+          <p data-en="Install it, grant permissions, hope everyone else installs the same one." data-zh="安裝、授權,還得指望對方也裝了同一個。">Install it, grant permissions, hope everyone else installs the same one.</p>
+        </div>
+        <div class="prob-card">
+          <div class="n">03</div>
+          <h3 data-en="Your document, uploaded" data-zh="你的文件,上傳出去">Your document, uploaded</h3>
+          <p data-en="The comments live on their server — which is exactly where sensitive reports can't go." data-zh="註解存在別人的伺服器上 — 而那正是機敏報告不能去的地方。">The comments live on their server — which is exactly where sensitive reports can't go.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW -->
+  <section class="wrap" id="how">
+    <div class="sec-head">
+      <p class="eyebrow" data-en="How it works" data-zh="運作方式">How it works</p>
+      <h2 data-en="The file is the database." data-zh="檔案本身,就是資料庫。">The file is the database.</h2>
+      <p data-en="No backend to explain, because there isn't one. Three steps, and the loop closes by itself." data-zh="沒有後端要解釋,因為根本沒有後端。三個步驟,而且迴圈會自己收合。">No backend to explain, because there isn't one. Three steps, and the loop closes by itself.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="bar"></div>
+        <h3 data-en="Open any HTML" data-zh="打開任何 HTML">Open any HTML</h3>
+        <p data-en="Drag a document in. Scripts are stripped on load, so even HTML from strangers is safe to open. Select text, pick a color, write a comment." data-zh="把文件拖進來。載入時自動移除內含程式碼,所以來路不明的 HTML 也能安心開。選取文字、挑顏色、寫下註解。">Drag a document in. Scripts are stripped on load, so even HTML from strangers is safe to open. Select text, pick a color, write a comment.</p>
+      </div>
+      <div class="step">
+        <div class="bar"></div>
+        <h3 data-en="Download the annotated copy" data-zh="下載含標記版">Download the annotated copy</h3>
+        <p data-en="One click bakes your highlights, comment threads and the engine into a new HTML file. Email it, drop it in chat, hand it over on a USB stick." data-zh="一鍵把你的標記、對話串和引擎烙進一個新的 HTML 檔。用信件寄、丟到聊天室、或用隨身碟交出去。">One click bakes your highlights, comment threads and the engine into a new HTML file. Email it, drop it in chat, hand it over on a USB stick.</p>
+      </div>
+      <div class="step">
+        <div class="bar"></div>
+        <h3 data-en="It merges when it comes back" data-zh="回傳時自動合併">It merges when it comes back</h3>
+        <p data-en="They open it directly — nothing to install — reply, and send it back. Both sides merge comment-by-comment. Nobody's notes get overwritten." data-zh="對方直接打開 — 不用裝任何東西 — 回覆後傳回來。兩邊逐則合併,誰的留言都不會被蓋掉。">They open it directly — nothing to install — reply, and send it back. Both sides merge comment-by-comment. Nobody's notes get overwritten.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- NO HTML FILE? -->
+  <section class="nofile" id="nofile">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow" data-en="Before you ask" data-zh="你可能想問">Before you ask</p>
+        <h2 data-en="“But my documents are in Word and Google Docs.”" data-zh="「可是我的文件都在 Word 和 Google 文件裡。」">“But my documents are in Word and Google Docs.”</h2>
+        <p data-en="Then you don't need to convert anything. Paste the text straight in and start marking it up — HTMLScope lays it out as a document for you." data-zh="那你根本不用轉檔。直接把內容貼進來就能開始標註 —— HTMLScope 會自動幫你排版成一份文件。">Then you don't need to convert anything. Paste the text straight in and start marking it up — HTMLScope lays it out as a document for you.</p>
+      </div>
+      <div class="nofile-hero">
+        <span class="lead" data-en="✍ Paste text instead" data-zh="✍ 直接貼上文字">✍ Paste text instead</span>
+        <p data-en="Copy from Word, Google Docs, a PDF, an email — anywhere. Paste, name it, done. No conversion, no upload, no account." data-zh="從 Word、Google 文件、PDF、email 或任何地方複製,貼上、命名、開始。不用轉檔、不用上傳、不用帳號。">Copy from Word, Google Docs, a PDF, an email — anywhere. Paste, name it, done. No conversion, no upload, no account.</p>
+      </div>
+      <div class="nofile-grid">
+        <div class="nofile-card">
+          <div class="src" data-en="Already have HTML" data-zh="已經有 HTML">Already have HTML</div>
+          <p data-en="AI-written reports, exported dashboards, saved web pages — drag the file straight in." data-zh="AI 寫的報告、匯出的儀表板、存下來的網頁 —— 直接把檔案拖進去。">AI-written reports, exported dashboards, saved web pages — drag the file straight in.</p>
+        </div>
+        <div class="nofile-card">
+          <div class="src" data-en="Word / Google Docs" data-zh="Word／Google 文件">Word / Google Docs</div>
+          <p data-en="Save As → “Web Page (.html)”, or File → Download → Web Page. Or skip it and just paste the text." data-zh="另存新檔 →「網頁 (.html)」,或 檔案 → 下載 → 網頁。也可以跳過這步,直接貼上文字。">Save As → “Web Page (.html)”, or File → Download → Web Page. Or skip it and just paste the text.</p>
+        </div>
+        <div class="nofile-card">
+          <div class="src" data-en="PDF / anything else" data-zh="PDF／其他任何東西">PDF / anything else</div>
+          <p data-en="Select the text, copy, paste. That is the whole workflow — nothing gets uploaded on the way." data-zh="選取文字、複製、貼上。整個流程就這樣 —— 過程中沒有任何東西被上傳。">Select the text, copy, paste. That is the whole workflow — nothing gets uploaded on the way.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI REVIEW LOOP -->
+  <section class="wrap loop" id="ai-loop">
+    <div class="sec-head">
+      <p class="eyebrow" data-en="The AI review loop · advanced" data-zh="AI 審閱閉環 · 進階">The AI review loop · advanced</p>
+      <h2 data-en="Turn your notes into the AI's next prompt." data-zh="把你的批註,變成 AI 的下一個 prompt。">Turn your notes into the AI's next prompt.</h2>
+      <p data-en="This part is for people who work with AI daily — <b>if that is not you, skip it; nothing here is needed for ordinary review.</b> A report the AI wrote gets reviewed by a human, then goes back to the AI to be fixed. HTMLScope closes that loop: one click turns every open annotation into a structured revision prompt, complete with the exact quote and its surrounding context, ready to paste into Claude, GPT or Cursor." data-zh="這一段是給每天跟 AI 工作的人看的 —— <b>如果不是你，跳過就好，一般的審閱用不到這些。</b>AI 寫的報告，由人審閱，再回到 AI 手上修改。HTMLScope 把這個迴圈收合起來:一鍵把每則未解決的標註變成結構化的修改指令，附上引用原文與前後脈絡，直接貼進 Claude、GPT 或 Cursor。">A report the AI wrote gets reviewed by a human — then goes back to the AI to be fixed. HTMLScope closes that loop: one click turns every open annotation into a structured revision prompt, complete with the exact quote and its surrounding context, ready to paste into Claude, GPT or Cursor.</p>
+    </div>
+    <div class="loop-grid">
+      <div class="loop-steps">
+        <div class="loop-step"><span class="ln">1</span><div><h3 data-en="Mark what's wrong" data-zh="標出問題">Mark what's wrong</h3><p data-en="Switch the four colors to the AI-review preset — fact error, unsourced, verified, tone." data-zh="把四色切成 AI 審閱預設 — 事實錯誤、缺來源、已查證、語氣。">Switch the four colors to the AI-review preset — fact error, unsourced, verified, tone.</p></div></div>
+        <div class="loop-step"><span class="ln">2</span><div><h3 data-en="One click → a prompt" data-zh="一鍵 → 一段指令">One click → a prompt</h3><p data-en="🤖 aggregates every note, quote and comment — with context — into one instruction. Copy it, or download .md." data-zh="🤖 把每則標註、引文、留言連同脈絡聚成一段指令。複製,或下載 .md。">🤖 aggregates every note, quote and comment — with context — into one instruction. Copy it, or download .md.</p></div></div>
+        <div class="loop-step"><span class="ln">3</span><div><h3 data-en="Paste back, regenerate" data-zh="貼回去,重新生成">Paste back, regenerate</h3><p data-en="The AI locates each passage by its quoted context and returns a revised draft. Review again — the loop tightens each round." data-zh="AI 靠引用脈絡定位每一段,回傳修改後的草稿。再審一次 — 迴圈每一輪都更收斂。">The AI locates each passage by its quoted context and returns a revised draft. Review again — the loop tightens each round.</p></div></div>
+      </div>
+      <div class="loop-code" aria-hidden="true">
+        <div class="chrome"><span class="fn">🤖 revision-prompt.md</span><span class="cp" data-en="Copied ✓" data-zh="已複製 ✓">Copied ✓</span></div>
+        <pre><span class="h">### Note 1 — Red: Fact error / hallucination</span>
+<span class="k">Marked text:</span> "revenue grew 20%"
+<span class="k">Context:</span> …The <span class="mk">〖revenue grew 20%〗</span> this quarter…
+<span class="k">Comments:</span>
+- Reviewer: Source? The appendix says 18%.
+
+<span class="k">Instructions:</span>
+- Address every note; treat issues as
+  required changes.
+- Locate each passage by its quoted context.
+- Return the complete revised HTML.</pre>
+      </div>
+    </div>
+    <div class="loop-presets">
+      <span class="loop-chip"><i style="background:var(--hl-r)"></i><span data-en="Fact error / hallucination" data-zh="事實錯誤／幻覺">Fact error / hallucination</span></span>
+      <span class="loop-chip"><i style="background:var(--hl-y)"></i><span data-en="Unsourced / verify" data-zh="缺來源／待查證">Unsourced / verify</span></span>
+      <span class="loop-chip"><i style="background:var(--hl-g)"></i><span data-en="Verified" data-zh="已查證">Verified</span></span>
+      <span class="loop-chip"><i style="background:var(--hl-b)"></i><span data-en="Tone / verbosity / format" data-zh="語氣／冗長／格式">Tone / verbosity / format</span></span>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="feat" id="features">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow" data-en="What's inside" data-zh="內建能力">What's inside</p>
+        <h2 data-en="Small file. Full review workflow." data-zh="檔案很小,審閱流程卻很完整。">Small file. Full review workflow.</h2>
+      </div>
+      <div class="feat-grid">
+        <div class="feat-cell"><div class="ic">A</div><h3 data-en="Highlights with presets" data-zh="四色螢光筆＋預設集">Highlights with presets</h3><p data-en="Four colors, one click to switch between a general-review preset and an AI-review one (fact error, unsourced, verified, tone) — or rename them yourself." data-zh="四色螢光筆,一鍵在「一般審閱」與「AI 報告審閱」(事實錯誤／缺來源／已查證／語氣)預設間切換,也能自己命名。">Four colors, one click to switch between a general-review preset and an AI-review one (fact error, unsourced, verified, tone) — or rename them yourself.</p></div>
+        <div class="feat-cell"><div class="ic">B</div><h3 data-en="Threaded comments" data-zh="對話串註解">Threaded comments</h3><p data-en="Every message carries a name and a timestamp. Reply back and forth, mark threads resolved." data-zh="每則留言都有署名與時間。可以來回回覆,也能把討論標記為已解決。">Every message carries a name and a timestamp. Reply back and forth, mark threads resolved.</p></div>
+        <div class="feat-cell"><div class="ic">C</div><h3 data-en="Edit the text itself" data-zh="直接改內文">Edit the text itself</h3><p data-en="Fix a typo or reword a line in place — edits travel inside the annotated copy too." data-zh="就地修錯字、改句子 — 改動一樣會跟著含標記版帶走。">Fix a typo or reword a line in place — edits travel inside the annotated copy too.</p></div>
+        <div class="feat-cell"><div class="ic">D</div><h3 data-en="Safe by default" data-zh="預設就安全">Safe by default</h3><p data-en="Loaded documents are stripped of scripts before they render. Open untrusted HTML without a second thought." data-zh="載入的文件在顯示前會拆掉所有程式碼。開來路不明的 HTML 不用擔心。">Loaded documents are stripped of scripts before they render. Open untrusted HTML without a second thought.</p></div>
+        <div class="feat-cell"><div class="ic">E</div><h3 data-en="Reads on a phone" data-zh="手機也看得到">Reads on a phone</h3><p data-en="Preview windows in chat and mail can't run scripts — so the highlights and a static comment table are baked in, visible anyway." data-zh="聊天與信件的預覽視窗不跑程式 — 所以標記和一份靜態對照表直接烙進檔案,照樣看得到。">Preview windows in chat and mail can't run scripts — so the highlights and a static comment table are baked in, visible anyway.</p></div>
+        <div class="feat-cell"><div class="ic">F</div><h3 data-en="Export anywhere" data-zh="匯出到任何地方">Export anywhere</h3><p data-en="A one-page HTML report, a Markdown checklist for issues/Notion/PRs, or structured JSON for scripts and LLMs. Plus print with numbered notes." data-zh="一頁式 HTML 報告、貼進 issue／Notion／PR 的 Markdown 清單、給程式與 LLM 讀的 JSON。也能列印附編號註解。">A one-page HTML report, a Markdown checklist for issues/Notion/PRs, or structured JSON for scripts and LLMs. Plus print with numbered notes.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRIVACY / KILLER ANGLE -->
+  <section class="wrap priv" id="privacy">
+    <div class="inner">
+      <p class="eyebrow" data-en="Where the cloud can't follow" data-zh="雲端到不了的地方">Where the cloud can't follow</p>
+      <h2 data-en="Built for the networks that block everything else." data-zh="為那些把其他工具全擋掉的網路而生。">Built for the networks that block everything else.</h2>
+      <p data-en="Finance desks, government offices, legal teams, hospitals — and any office or school where IT simply does not allow uploading files to the cloud. The more sensitive the thing you need reviewed, the less it can go into a review SaaS. HTMLScope never asks to. The document, the comments, and the tool are one file that stays on your side of the firewall." data-zh="金融單位、政府機關、法務團隊、醫院，還有任何一間「IT 不准把檔案傳上雲端」的辦公室或學校 — 需要審閱的東西越敏感，越不能丟進審閱 SaaS。HTMLScope 從不要求上傳。文件、註解、工具三合一,全留在你的防火牆這一側。">Finance desks, government offices, legal teams, hospitals — the places that produce the most sensitive reports are the same places that can't upload them to a review SaaS. HTMLScope never asks to. The document, the comments, and the tool are one file that stays on your side of the firewall.</p>
+      <div class="grid">
+        <div class="g"><div class="k" data-en="NO UPLOAD" data-zh="不上傳">NO UPLOAD</div><p data-en="Everything runs in your browser. There is no server to send anything to." data-zh="一切都在你的瀏覽器裡跑,根本沒有伺服器可以送出去。">Everything runs in your browser. There is no server to send anything to.</p></div>
+        <div class="g"><div class="k" data-en="NO ACCOUNT" data-zh="不需帳號">NO ACCOUNT</div><p data-en="No sign-up, no email, no identity. Your name on a comment is just a label you type." data-zh="免註冊、免 email、免身分。註解上的名字只是你自己打的一個標籤。">No sign-up, no email, no identity. Your name on a comment is just a label you type.</p></div>
+        <div class="g"><div class="k" data-en="NO TRACE" data-zh="不留痕跡">NO TRACE</div><p data-en="No analytics, no telemetry, no phone-home. Audit the single file yourself — it's all there." data-zh="無分析追蹤、無遙測、不回報。單一檔案你可以自己稽核 — 全都攤在裡面。">No analytics, no telemetry, no phone-home. Audit the single file yourself — it's all there.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARE -->
+  <section class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow" data-en="How it's different" data-zh="哪裡不一樣">How it's different</p>
+      <h2 data-en="The same review, minus the platform." data-zh="一樣的審閱,只是少了那個平台。">The same review, minus the platform.</h2>
+    </div>
+    <div class="cmp-wrap">
+      <table class="cmp-table">
+        <thead>
+          <tr>
+            <th data-en="" data-zh=""></th>
+            <th data-en="Cloud review SaaS" data-zh="雲端審閱 SaaS">Cloud review SaaS</th>
+            <th class="us">HTMLScope</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td data-en="Install / extension" data-zh="安裝 / 擴充">Install / extension</td><td data-en="Required" data-zh="需要">Required</td><td class="us yes" data-en="None" data-zh="不用">None</td></tr>
+          <tr><td data-en="Account &amp; seats" data-zh="帳號與席次">Account &amp; seats</td><td data-en="Required, per month" data-zh="需要,按月計費">Required, per month</td><td class="us yes" data-en="None" data-zh="不用">None</td></tr>
+          <tr><td data-en="Where comments live" data-zh="註解存在哪">Where comments live</td><td class="no" data-en="Their server" data-zh="他們的伺服器">Their server</td><td class="us" data-en="Inside the file" data-zh="檔案裡">Inside the file</td></tr>
+          <tr><td data-en="Works offline / air-gapped" data-zh="離線 / 封閉網路可用">Works offline / air-gapped</td><td class="no" data-en="No" data-zh="不行">No</td><td class="us yes" data-en="Yes" data-zh="可以">Yes</td></tr>
+          <tr><td data-en="Send to someone with no account" data-zh="傳給沒帳號的人">Send to someone with no account</td><td class="no" data-en="They must sign up" data-zh="對方得註冊">They must sign up</td><td class="us yes" data-en="They just open it" data-zh="直接打開就好">They just open it</td></tr>
+          <tr><td data-en="Turn feedback into an AI prompt" data-zh="把回饋變成 AI 指令">Turn feedback into an AI prompt</td><td class="no" data-en="Not built for it" data-zh="沒這功能">Not built for it</td><td class="us yes" data-en="One click" data-zh="一鍵">One click</td></tr>
+          <tr><td data-en="Cost" data-zh="費用">Cost</td><td data-en="$24–79 / month" data-zh="每月 $24–79">$24–79 / month</td><td class="us" data-en="Free single file" data-zh="免費的單一檔案">Free single file</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="wrap final" id="get">
+    <p class="eyebrow" data-en="Get it" data-zh="拿去用">Get it</p>
+    <h2 data-en="Download one file. Start marking up." data-zh="下載一個檔案,開始劃重點。">Download one file. Start marking up.</h2>
+    <p data-en="Save it anywhere, double-click to open, drag in a document. That's the whole setup." data-zh="存到任何地方,雙擊打開,拖一份文件進去。安裝就這樣結束了。">Save it anywhere, double-click to open, drag in a document. That's the whole setup.</p>
+    <div class="cta">
+      <a class="btn primary" href="htmlscope.html" download data-en="Download htmlscope.html" data-zh="下載 htmlscope.html">Download htmlscope.html</a>
+      <a class="btn ghost" href="#" id="ghlink" data-en="View source on GitHub" data-zh="在 GitHub 看原始碼">View source on GitHub</a>
+    </div>
+    <p class="fileline" data-en="One HTML file · ~70 KB · no dependencies · noncommercial license" data-zh="一個 HTML 檔 · 約 70 KB · 零依賴 · 非商業授權">One HTML file · ~70 KB · no dependencies · noncommercial license</p>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span class="brand"><span class="sq" style="display:inline-block;vertical-align:-2px"></span> HTMLScope</span>
+    <span data-en="Local-first document review. Built in Taiwan." data-zh="本地優先的文件審閱工具。台灣製造。">Local-first document review. Built in Taiwan.</span>
+    <span>
+      <a href="#how" data-en="How it works" data-zh="運作方式">How it works</a>
+      <a href="#get" data-en="Download" data-zh="下載">Download</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var root=document.documentElement;
+  /* theme */
+  var TKEY='htmlscope-lp-theme';
+  function sysDark(){return matchMedia('(prefers-color-scheme:dark)').matches;}
+  var saved=null;try{saved=localStorage.getItem(TKEY);}catch(e){}
+  if(saved==='dark'||saved==='light')root.setAttribute('data-theme',saved);
+  function isDark(){var t=root.getAttribute('data-theme');return t?t==='dark':sysDark();}
+  document.getElementById('theme').addEventListener('click',function(){
+    var next=isDark()?'light':'dark';root.setAttribute('data-theme',next);
+    try{localStorage.setItem(TKEY,next);}catch(e){}
+  });
+  /* language */
+  var LKEY='htmlscope-lp-lang';
+  var lang=null;try{lang=localStorage.getItem(LKEY);}catch(e){}
+  if(lang!=='zh'&&lang!=='en')lang=((navigator.language||'').toLowerCase().indexOf('zh')===0)?'zh':'en';
+  function applyLang(l){
+    lang=l;
+    document.querySelectorAll('[data-en]').forEach(function(el){
+      var v=el.getAttribute('data-'+l);if(v!==null)el.innerHTML=v;
+    });
+    root.setAttribute('lang',l==='zh'?'zh-Hant':'en');
+    document.getElementById('lang').textContent=(l==='zh')?'EN':'中文';
+    try{localStorage.setItem(LKEY,l);}catch(e){}
+  }
+  document.getElementById('lang').addEventListener('click',function(){applyLang(lang==='zh'?'en':'zh');});
+  applyLang(lang);
+  /* demo highlighter animation on view */
+  var demo=document.getElementById('demo');
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){demo.classList.add('play');io.disconnect();}});},{threshold:.35});
+    io.observe(demo);
+  }else{demo.classList.add('play');}
+})();
+</script>
+</body>
+</html>
