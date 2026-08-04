@@ -6,7 +6,8 @@
 
 ## 使用
 
-**線上直接試用:https://sjjcoder.github.io/htmlscope/**（不必下載；一樣是在你自己的瀏覽器裡跑，沒有任何資料上傳）
+**線上直接試用:https://sjjcoder.github.io/htmlscope/**
+（不必下載；一樣是在你自己的瀏覽器裡跑，沒有任何資料上傳）
 
 或雙擊 `htmlscope.html` → 把任何 HTML 檔拖進去（或用「✍ 直接貼上文字」貼 Word／Google 文件的內容）→ 選取文字開始標註。
 
