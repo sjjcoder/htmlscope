@@ -41,9 +41,18 @@
 回歸測試(桌面 1280 / 短螢幕 573 / 手機 375 三種寬度):標記、署名留言、提議修改、三個選單貼齊與互斥、
 提示條調色盤、無橫向捲軸、把手可抓 —— 全數通過。
 
-授權:`LICENSE` 最上方補 `SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0`。
-注意 GitHub 目前仍回報 `NOASSERTION`(About 側欄不顯示授權),原因是檔案裡的中文摘要讓全文比對
-對不上 PolyForm 原文 —— SPDX 標頭只解決機器可讀,不解決 GitHub 的偵測。
+**授權檔整理**:`LICENSE` 最上方補 `SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0`,
+並把夾在條款中間的中文摘要搬到獨立的 `LICENSE-zh.md` —— 現在 `LICENSE` 與 PolyForm 原文
+**逐字 100% 一致**(已用官方原文比對驗證),唯一增補是 SPDX 標頭與 `Required Notice:` 版權行。
+後者不能刪:PolyForm 的 Notices 一節明文要求散布時附上「任何以 `Required Notice:` 開頭的純文字行」,
+那是這份授權指定的版權聲明載體。
+
+> **更正一個我先前的錯誤判斷**:我原本說 GitHub 回報 `NOASSERTION` 是因為中文摘要讓全文比對對不上。
+> 查證後不是 —— GitHub 的偵測範圍就是 choosealicense.com 的 47 個授權(全部是開源授權),
+> **PolyForm 屬於 source-available,根本不在名單裡**,所以 About 側欄永遠不會顯示這個授權,
+> 清理檔案或加 SPDX 標頭都改變不了。搬走中文摘要仍然值得做,但理由是另外兩個:
+> ①避免摘要夾在條款中間,讓授權文件的效力範圍變得可爭論(摘要本身已寫明以英文為準,但位置容易誤解)
+> ②SPDX 掃描工具(FOSSA／ScanCode／reuse)比對的是全文,乾淨的檔案才認得出來。
 
 ## v3.9 — 2026-08-03（UI/UX 全面稽核後的修正）
 
