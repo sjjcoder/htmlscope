@@ -137,8 +137,8 @@ body.reading #view{display:block}
 /* ================= 標註引擎（會被注入到文件 iframe / 含標記版檔案裡） ================= */
 var ENGINE_CSS = [
 /* 深淺色自動切換:UI 全部走這組變數 */
-'#annoBar,#annoPop,#annoPanel,#annoToggle,#annoStaticApp,#annoPromptOverlay,#annoDiffOverlay,.anno-menu{--as:#fff;--atx:#222;--amut:#888;--aln:#ccc;--achip:#f0f0f0;--amsg:#f4f4f4;--aacc:#0e7b6c;--adelb:#fdeceb;--adelt:#b4372e}',
-'@media (prefers-color-scheme: dark){#annoBar,#annoPop,#annoPanel,#annoToggle,#annoStaticApp,#annoPromptOverlay,#annoDiffOverlay,.anno-menu{--as:#23282a;--atx:#e6eae8;--amut:#9aa8a4;--aln:#454c4e;--achip:#2e3436;--amsg:#2b3133;--aacc:#3bb89f;--adelb:#3a201d;--adelt:#e07a70}}',
+'#annoBar,#annoPop,#annoPanel,#annoToggle,#annoStaticApp,#annoPromptOverlay,#annoDiffOverlay,#annoToast,.anno-menu{--as:#fff;--atx:#222;--amut:#888;--aln:#ccc;--achip:#f0f0f0;--amsg:#f4f4f4;--aacc:#0e7b6c;--adelb:#fdeceb;--adelt:#b4372e}',
+'@media (prefers-color-scheme: dark){#annoBar,#annoPop,#annoPanel,#annoToggle,#annoStaticApp,#annoPromptOverlay,#annoDiffOverlay,#annoToast,.anno-menu{--as:#23282a;--atx:#e6eae8;--amut:#9aa8a4;--aln:#454c4e;--achip:#2e3436;--amsg:#2b3133;--aacc:#3bb89f;--adelb:#3a201d;--adelt:#e07a70}}',
 '#annoBar[hidden],#annoPanel[hidden],#annoPop[hidden]{display:none!important}',
 'mark.anno{background:transparent;color:inherit;cursor:pointer;border-radius:2px;padding:0 1px}',
 'mark.anno:hover{filter:brightness(.9)}',
@@ -282,7 +282,7 @@ var ENGINE_CSS = [
 '.dv-del{background:rgba(228,87,74,.2);text-decoration:line-through;text-decoration-color:rgba(228,87,74,.7)}',
 '.dv-ins{background:rgba(60,184,120,.22);text-decoration:underline;text-decoration-color:rgba(60,184,120,.8)}',
 '.dv-empty{padding:30px 16px;text-align:center;color:var(--amut);font-size:13px}',
-'.anno-menu{position:fixed;right:18px;bottom:64px;z-index:2147483000;background:var(--as);border:1px solid var(--aln);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.32);padding:6px;width:min(268px,calc(100vw - 24px))}',
+'.anno-menu{position:fixed;left:0;top:0;z-index:2147483000;background:var(--as);border:1px solid var(--aln);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.32);padding:6px;width:min(268px,calc(100vw - 24px))}',
 '.anno-menu[hidden]{display:none!important}',
 '.anno-menu .lm-title{font-size:11px;color:var(--amut);padding:5px 8px 6px}',
 '.anno-menu button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--atx);font:inherit;font-size:13px;padding:7px 9px;border-radius:7px;cursor:pointer}',
@@ -1040,8 +1040,22 @@ function applyLegend(){
     if(fc){ fc.title = T.only + t; var fl = fc.querySelector('.fclab'); if(fl) fl.textContent = LEGEND[c]; } }); }
 /* 🎨 圖例:改為預設集選單(一般審閱 / AI 報告審閱 / 自訂),語言感知、隨檔案傳遞 */
 var legendMenu = document.getElementById('annoLegendMenu');
+/* 選單定位:貼在觸發按鈕正下方,而不是固定在面板同一角落 —— 原本三個選單都用 right:18px;bottom:64px,
+   結果點的是面板頂端的按鈕、選單卻蓋住面板中下段的標註清單,實測時很不直覺。 */
+function placeMenu(menu, trigger){
+  menu.hidden = false;                                   /* 先顯示才能量到尺寸 */
+  var t = trigger.getBoundingClientRect();
+  var mw = menu.offsetWidth, mh = menu.offsetHeight, pad = 8;
+  var left = Math.min(Math.max(pad, t.left), window.innerWidth - mw - pad);
+  var top = t.bottom + 6;
+  if(top + mh > window.innerHeight - pad) top = Math.max(pad, t.top - mh - 6);  /* 下方空間不足就往上開 */
+  menu.style.left = Math.round(left) + 'px';
+  menu.style.top = Math.round(top) + 'px';
+}
 function markLegendSel(){ legendMenu.querySelectorAll('[data-preset]').forEach(function(b){ b.classList.toggle('sel', b.getAttribute('data-preset') === (legendMode || 'general')); }); }
-document.getElementById('annoLegend').addEventListener('click', function(e){ e.stopPropagation(); exportMenu.hidden = true; aiMenu.hidden = true; legendMenu.hidden = !legendMenu.hidden; if(!legendMenu.hidden) markLegendSel(); });
+document.getElementById('annoLegend').addEventListener('click', function(e){ e.stopPropagation();
+  exportMenu.hidden = true; aiMenu.hidden = true;
+  if(legendMenu.hidden){ placeMenu(legendMenu, this); markLegendSel(); } else { legendMenu.hidden = true; } });
 legendMenu.querySelectorAll('[data-preset]').forEach(function(b){ b.addEventListener('click', function(){
   legendMode = b.getAttribute('data-preset');
   try{ localStorage.setItem('annoReader::legendPreset', legendMode); }catch(e){}
@@ -1255,7 +1269,9 @@ function buildJSON(){
         comments: a.thread.map(function(m){ return { author: m.author || '', text: m.text, ts: m.ts || 0, time: m.ts ? new Date(m.ts).toLocaleString(T.dl) : '' }; }) }; })
   }, null, 2); }
 var exportMenu = document.getElementById('annoExportMenu');
-document.getElementById('annoExport').addEventListener('click', function(e){ e.stopPropagation(); legendMenu.hidden = true; aiMenu.hidden = true; exportMenu.hidden = !exportMenu.hidden; });
+document.getElementById('annoExport').addEventListener('click', function(e){ e.stopPropagation();
+  legendMenu.hidden = true; aiMenu.hidden = true;
+  if(exportMenu.hidden) placeMenu(exportMenu, this); else exportMenu.hidden = true; });
 exportMenu.querySelectorAll('[data-export]').forEach(function(b){ b.addEventListener('click', function(){
   var fmt = b.getAttribute('data-export'); exportMenu.hidden = true;
   if(fmt === 'print'){
@@ -1293,7 +1309,8 @@ var promptTA = promptOverlay.querySelector('textarea');
 /* 🤖 選單:產生修改指令 / 比較版本 —— 兩個都圍繞「AI 修改這一輪」,合成一顆入口鈕,不再增加面板按鈕數 */
 var aiMenu = document.getElementById('annoAiMenu');
 document.getElementById('annoPrompt').addEventListener('click', function(e){
-  e.stopPropagation(); legendMenu.hidden = true; exportMenu.hidden = true; aiMenu.hidden = !aiMenu.hidden; });
+  e.stopPropagation(); legendMenu.hidden = true; exportMenu.hidden = true;
+  if(aiMenu.hidden) placeMenu(aiMenu, this); else aiMenu.hidden = true; });
 aiMenu.querySelectorAll('[data-ai]').forEach(function(b){ b.addEventListener('click', function(){
   var act = b.getAttribute('data-ai'); aiMenu.hidden = true;
   if(act === 'prompt') openPromptOverlay(); else if(act === 'diff') openDiffOverlay(); }); });
@@ -1546,7 +1563,7 @@ renderAll();
 
 /* ================= 閱讀器本體 ================= */
 (function(){
-var VER = 'v3.8';
+var VER = 'v3.9';
 var RECENTS_KEY = 'annoReader::recents';
 var DOC_PREFIX = 'annoReader::doc::';
 var LANG_KEY = 'annoReader::lang';

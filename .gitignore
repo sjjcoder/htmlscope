@@ -8,6 +8,9 @@ sample_*.html
 *_report.html
 *.md.tmp
 
+# 對外發文的草稿（還沒決定要不要發，先不進公開 repo）
+SHOW_HN_DRAFT.md
+
 # OS / 編輯器
 Thumbs.db
 desktop.ini

@@ -40,7 +40,7 @@
 
 - **單檔三段式**：閱讀器外殼（開檔/最近清單）＋ 標註引擎（`ENGINE` 函式 + `ENGINE_CSS` + `ENGINE_UI` 字串）＋ 注入機制。引擎以 `(ENGINE.toString())()` 形式注入文件 iframe，也烙進「含標記版」輸出檔
 - **按鈕分工（避免重複）**：頂欄只放導覽（🏠 回列表、📂 開啟）＋全域語言；所有文件/標註動作只在面板（面板須自給自足，才能在獨立開啟的含標記版運作）。面板的 🌐 靠 `window.parent.__scopeSetLang` 偵測是否在閱讀器內，在則隱藏、獨立開啟才顯示。**新增動作鈕請只加在面板,不要在頂欄複製**
-- **⚠️ 新增彈出視窗/選單時務必檢查調色盤變數清單**：`--as`/`--atx`/`--aln`… 這組 CSS 變數只定義在特定選擇器上（`#annoBar,#annoPop,#annoPanel,#annoToggle,#annoStaticApp,#annoPromptOverlay,#annoDiffOverlay,.anno-menu`），漏加新元件的 ID 會導致該元件背景/文字色變透明看不清楚（v2.3、v3.1 都踩過這個坑）——新增任何頂層彈出元件,第一件事就是把它的 ID 加進這兩條規則(含深色模式那條)
+- **⚠️ 新增彈出視窗/選單時務必檢查調色盤變數清單**：`--as`/`--atx`/`--aln`… 這組 CSS 變數只定義在特定選擇器上（`#annoBar,#annoPop,#annoPanel,#annoToggle,#annoStaticApp,#annoPromptOverlay,#annoDiffOverlay,#annoToast,.anno-menu`），漏加新元件的 ID 會導致該元件背景/文字色變透明看不清楚（v2.3、v3.1、v3.9 都踩過這個坑 — 三次了）——新增任何頂層彈出元件,第一件事就是把它的 ID 加進這兩條規則(含深色模式那條)
 - **含標記版輸出** = 清理後的文件 + 引擎 + `script#annoPreset`（JSON，v2 格式 `{legend, annotations}`）+ 烙印 mark 元素 + `#annoStaticApp` 靜態對照表（無 JS 環境如手機預覽用；正常瀏覽器開啟時引擎會移除它接管互動）
 - **標記定位**：引文（quote）為主、前後 32 字上下文（`prefix`/`suffix`）消歧、位置就近決勝 — 對齊 W3C TextQuoteSelector；舊標註無上下文則退回位置就近並於定位後就地補上。精確失敗 → **模糊救回**（`fuzzyLocate`：上下文重定位 → 局部/全文 bigram Dice 滑窗），命中標為 `approx`（虛線+≈,清單琥珀色）。仍找不到才列為 orphan（留言不丟）
 - **儲存**：localStorage，key 用「文件標題」的 hash（檔名會因 `_標記版` 後綴改變，標題不變）；刪除用墓碑（`key::del`）防止合併時復活
