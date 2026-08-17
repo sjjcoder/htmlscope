@@ -50,6 +50,7 @@
 - **i18n**：外殼與引擎各持一份字典（`SHELL_I18N`／引擎內 `I18N`），共用 localStorage key `annoReader::lang`；介面文字一律由 `applyShellLang()`／`applyI18n()` 填入，**不要**寫死在 HTML 或 `ENGINE_UI` 字串裡。新增介面文字時兩種語言都要補
 - **彈出視窗共用外觀**：`.anno-modal-ov`(遮罩+置中)／`.anno-modal-bx`(卡片)＋`.pm-head`/`.pm-hint`/`.pm-foot`，🤖修改指令與🔍比較版本兩個 modal 共用同一套；新增 modal 沿用這組 class，不要重寫外觀
 - **版本比對(diff)**：`saveBaseline()`/`loadBaseline()` 存取 `KEY::baseline`(全文快照+時間戳,純本機、不烙進含標記版)；`diffWords()` 走自寫字詞級 Myers diff(`myersDiffCapped`+`backtrackDiff`),差異或文件過大時退回 `prefixSuffixDiff`(共同前綴/後綴+中段整塊替換,O(N+M) 保底,避免卡頓)
+- **⚠️ SVG 裡的文字不可以標註,`walker()` 已整體排除** — 兩個原因缺一不可地嚴重：①`createElement('mark')` 造出來的是 **HTML 命名空間**的元素，插進 SVG 的 `<text>` 不是它認得的文字子元素，**整段不渲染、盒子量出來 0×0**，被標的字直接消失；②列印編號 `<sup>` 屬於 HTML 規範裡「**會中斷 foreign content 解析**」的標籤，一旦烙進 SVG，檔案再次開啟時解析器就從那裡跳出 SVG，後面的 `rect`／`text` 全被當 HTML 重排，整張圖散掉（實測 15 個元素的圖被扯出 20 幾個裸元素）。`cleanDocument` 會在 **`parseFromString` 之前**先從原始字串拆掉那些 `<sup>`（順序不能反，等拿到 DOM 就來不及了）。**要在 SVG 裡畫螢光筆得改用 `tspan` 外加背景矩形並自算座標，代價遠高於價值 — 不要試**
 - **列印是獨立的一套渲染,改動前先讀這條**：瀏覽器列印預設**不印背景色、卻照印文字色**。所以 ①螢光標記(靠 `background-color`)預設印不出來 → `mark.anno` 用 `print-color-adjust:exact` 單獨強制 + 底線雙保險；②深色文件會變成白紙上的淺灰字(實測對比 1.21:1,整份形同空白) → `beforeprint` 量底色亮度,偏暗才掛 `anno-print-light` 強制白底深字,淺色文件不動；③烙進內文的 `[n]` 編號與文末靜態對照表**是一組的,不可以只藏一個**(曾經只藏對照表,結果紙上全是孤兒編號)
 - **使用說明的示意圖用純 HTML/CSS(`.ug-*`),不要用真實截圖** — UI 仍在快速迭代,螢幕截圖會不斷過期、需要重截；CSS 示意圖改文字幾個字就跟上,不會過期。兩份圖各自寫在 `SHELL_I18N.zh.tips` / `.en.tips` 字串裡(非即時雙語切換,兩語言各自完整一份)
 
@@ -59,6 +60,7 @@
 2. **舊版《分配書 v6.3》內嵌單-note 格式標註** — 閱讀器開啟時自動搬移其 localStorage（key `agenthub-anno-v6.3`）
 3. **同標題不同文件會共用標記庫**（title-hash 索引的代價，換取來回傳遞的連續性）
 4. 相對路徑圖片不顯示（iframe 無 base URL）；文件快取上限 1.5MB
+5. **SVG 示意圖裡的文字無法標註**（見架構要點第一條）—— 選取時會出提示條說明；v4.2 之前誤標進去的舊檔案，用 v4.2 開啟即自動修復，但要重新匯出一次含標記版才會乾淨
 
 ## 開發規則
 

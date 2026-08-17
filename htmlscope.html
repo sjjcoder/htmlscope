@@ -406,6 +406,7 @@ var I18N = {
   legend:{ y:'重點', r:'有問題', g:'已確認', b:'補充說明' },
   cn:{ y:'黃', r:'紅', g:'綠', b:'藍' },
   only:'只看', open:'未解決', openTitle:'只看還沒解決的',
+  svgNoMark:'這段字在圖裡(SVG),沒辦法加標記 —— 可以改標圖旁邊的說明文字',
   drag:'⠿ 可拖曳', dragTitle:'按住這裡拖曳移動視窗', close:'關閉',
   ph:'輸入註解或回覆…', resolve:'✓ 解決', reopen:'↩ 重新開啟', del:'刪除', send:'送出',
   tog:'標註', resizeTitle:'拖曳調整大小', panel:'標註清單',
@@ -434,6 +435,8 @@ var I18N = {
   emptyList:'還沒有標註 — 選取文件裡的文字即可開始',
   emptyFilter:'沒有符合篩選條件的標註',
   orphan:'⚠ 這段原文已被改動，標記接不回去（留言都還在）：',
+  svgOrphan:'🖼 這段字在圖裡（SVG），沒辦法加標記（留言都還在）：',
+  svgOrphanHint:'圖（SVG）裡的文字沒辦法加螢光標記 —— 硬加會讓那段字整個不見，所以工具不放。你的留言完整保留在這裡。',
   orphanHint:'這通常是因為文件這段文字被編輯或被 AI 改寫過，所以標記找不到原本的位置。你的留言與這則標註都完整保留、也會照樣傳給對方；想重新標的話，選取新的文字再標一次即可。',
   approxMark:'≈ ', approxHint:'位置為近似 — 原文已被修改,系統依前後文與相似度重新定位,請確認標的是否正確',
   whoLab:'你是', whoPh:'填你的名字(會顯示在留言上)',
@@ -494,6 +497,7 @@ var I18N = {
   legend:{ y:'Key point', r:'Issue', g:'Confirmed', b:'Note' },
   cn:{ y:'Yellow', r:'Red', g:'Green', b:'Blue' },
   only:'Show only ', open:'Open', openTitle:'Show unresolved only',
+  svgNoMark:'This text is inside a diagram (SVG) and cannot be highlighted — try the caption next to it',
   drag:'⠿ Drag', dragTitle:'Hold here to move this popup', close:'Close',
   ph:'Write a comment or reply…', resolve:'✓ Resolve', reopen:'↩ Reopen', del:'Delete', send:'Send',
   tog:'Notes', resizeTitle:'Drag to resize', panel:'Annotations',
@@ -522,6 +526,8 @@ var I18N = {
   emptyList:'No annotations yet — select some text in the document to start',
   emptyFilter:'No annotations match the current filter',
   orphan:'⚠ This passage was edited, so the highlight lost its anchor (your comments are safe): ',
+  svgOrphan:'🖼 This text lives inside a diagram (SVG) and cannot be highlighted (your comments are safe): ',
+  svgOrphanHint:'Text inside an SVG diagram cannot carry a highlight — forcing one makes the text vanish, so the tool leaves it alone. Your comments are kept here.',
   orphanHint:'This usually means the text was edited — by you or by an AI — so the highlight can no longer find its original spot. Your comments and this annotation are fully preserved and still travel with the file; to re-anchor it, just select the new text and mark it again.',
   approxMark:'≈ ', approxHint:'Approximate location — the original text was edited; re-anchored by context and similarity. Please verify the target.',
   whoLab:'You are', whoPh:'your name (shown on your comments)',
@@ -654,9 +660,28 @@ function toast(html, ms){
   el.innerHTML = html; el.hidden = false;
   clearTimeout(toastTimer); toastTimer = setTimeout(function(){ el.hidden = true; }, ms || 4200); }
 
+/* SVG 裡的文字一律排除,不納入可標註範圍。原因是 HTML 的 <mark> 放進 SVG 的 <text> 之後
+   根本不會被渲染(實測命名空間是 xhtml、盒子量出來 0x0),被標的字會直接消失 ——
+   使用者看到的就是「標了之後連原本的文字都不見了」。
+   更糟的是列印編號 <sup>:HTML 規範裡 sup 屬於「會中斷 foreign content 解析」的標籤,
+   一旦烙進 SVG,檔案再次開啟時解析器會從那裡把 SVG 切斷,後面的 rect/text 全被踢出來
+   當成 HTML 內容重排,整張圖就散掉了(實測一張 15 個元素的圖被扯出 20 幾個裸元素)。
+   排除之後,SVG 內既有的舊標註會定位失敗 → 走既有的 orphan 流程,留言完整保留。 */
+/* 定位失敗的標註,再確認一次是不是「其實還在,只是在圖裡」——
+   這兩種情況給的說明完全不同:一個是文件被改過(要重新對照),
+   一個是工具本來就不支援(文件沒問題)。講錯會讓人以為自己的檔案壞了。 */
+function quoteIsInSvg(q){
+  q = (q || '').trim();
+  if(!q) return false;
+  var svgs = document.querySelectorAll('svg');
+  for(var i = 0; i < svgs.length; i++){
+    if((svgs[i].textContent || '').indexOf(q) >= 0) return true; }
+  return false;
+}
 function walker(){ return document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, { acceptNode: function(n){
   var p = n.parentElement;
   if(!p || p.closest(UI + ',script,style,#annoPrintApp,.annoPrintNo')) return NodeFilter.FILTER_REJECT;
+  if(p.closest('svg')) return NodeFilter.FILTER_REJECT;
   return NodeFilter.FILTER_ACCEPT; } }); }
 function fullText(){ var w = walker(), s = '', n; while(n = w.nextNode()) s += n.nodeValue; return s; }
 function pointToOffset(container, offset){
@@ -756,6 +781,7 @@ function renderAll(){
   var full = fullText();
   annos.forEach(function(a){
     a.orphan = !anchor(a, full);
+    a.inSvg = a.orphan && quoteIsInSvg(a.quote);   /* 分辨「文件被改過」與「其實在圖裡,工具不支援」 */
     /* 提議是否已經被實現:文件現在這段文字已經等於提議內容(通常是 AI 照著修改指令改好了,
        或別人先改了)。此時提議不該再顯示成「待處理」—— 按下接受只會產生一筆誤導的稽核紀錄。
        這是實際跑完 AI 閉環才發現的問題。 */
@@ -775,6 +801,9 @@ function showBarForSelection(){
   var r = sel.getRangeAt(0);
   var c = r.commonAncestorContainer; c = c.nodeType === 1 ? c : c.parentElement;
   if(!c || c.closest(UI) || !r.toString().trim()){ bar.hidden = true; return; }
+  /* 圖(SVG)裡的字沒辦法標:HTML 的 <mark> 放進 SVG 不會渲染,硬標會讓那段字消失。
+     直接講清楚,別讓使用者以為是自己選錯了。 */
+  if(c.closest('svg')){ bar.hidden = true; toast(T.svgNoMark); return; }
   var rect = r.getBoundingClientRect();
   bar.hidden = false;
   var x = Math.min(Math.max(8, rect.left + rect.width/2 - bar.offsetWidth/2), window.innerWidth - bar.offsetWidth - 8);
@@ -1009,11 +1038,11 @@ function updatePanel(){
   if(!shown.length){ var em2 = document.createElement('div'); em2.className = 'empty'; em2.textContent = T.emptyFilter; list.appendChild(em2); return; }
   shown.forEach(function(a){
     var d = document.createElement('div'); d.className = 'ap-item' + (a.orphan ? ' orphan' : '') + (a.resolved ? ' resolved' : '') + (a.approx ? ' approx' : '') + (a.suggestion ? ' sug' : '');
-    if(a.orphan) d.title = T.orphanHint; else if(a.approx) d.title = T.approxHint;
+    if(a.orphan) d.title = (a.inSvg ? T.svgOrphanHint : T.orphanHint); else if(a.approx) d.title = T.approxHint;
     var dot = document.createElement('span'); dot.className = 'dot c-' + a.color; d.appendChild(dot);
     if(a.suggestion){ var bg = document.createElement('span'); bg.className = 'badge'; bg.textContent = T.sugBadge; d.appendChild(bg); }
     var q = document.createElement('span'); q.className = 'q';
-    q.textContent = (a.orphan ? T.orphan : (a.approx ? T.approxMark : '')) + (a.resolved ? '✓ ' : '') + (a.quote.length > 46 ? a.quote.slice(0,46) + '…' : a.quote);
+    q.textContent = (a.orphan ? (a.inSvg ? T.svgOrphan : T.orphan) : (a.approx ? T.approxMark : '')) + (a.resolved ? '✓ ' : '') + (a.quote.length > 46 ? a.quote.slice(0,46) + '…' : a.quote);
     d.appendChild(q);
     if(a.suggestion){ var sl = document.createElement('div'); sl.className = 'sugline'; sl.textContent = '→ ' + T.sugLabel + T.sep + '「' + (a.suggestion.length > 42 ? a.suggestion.slice(0,42) + '…' : a.suggestion) + '」'; d.appendChild(sl); }
     if(a.thread.length){
@@ -1208,9 +1237,11 @@ window.addEventListener('beforeprint', function(){
   sorted.forEach(function(a, i){
     var ms = document.querySelectorAll('mark.anno[data-id="' + a.id + '"]');
     if(ms.length){
-      var sup = document.createElement('sup');
-      sup.className = 'annoPrintNo'; sup.textContent = '[' + (i+1) + ']';
-      ms[ms.length - 1].appendChild(sup); printAdded.push(sup); }
+      var host = ms[ms.length - 1];
+      if(!host.closest('svg')){                            /* sup 會中斷 SVG 解析,絕不放進去 */
+        var sup = document.createElement('sup');
+        sup.className = 'annoPrintNo'; sup.textContent = '[' + (i+1) + ']';
+        host.appendChild(sup); printAdded.push(sup); } }
     var d = document.createElement('div'); d.style.cssText = 'margin:8px 0;font-size:12px';
     var head = document.createElement('b');
     head.textContent = '[' + (i+1) + '] ' + icons[a.color] + (a.resolved ? T.resolvedParen : '') + '「' + a.quote.slice(0,40) + (a.quote.length > 40 ? '…' : '') + '」';
@@ -1516,8 +1547,10 @@ function buildStandalone(){
     sorted.forEach(function(a, i){
       var ms = clone.querySelectorAll('mark.anno[data-id="' + a.id + '"]');
       if(ms.length){
-        var sup = document.createElement('sup'); sup.className = 'annoPrintNo'; sup.textContent = '[' + (i+1) + ']';
-        ms[ms.length - 1].appendChild(sup); }
+        var host = ms[ms.length - 1];
+        if(!host.closest('svg')){                          /* 同上:烙進 SVG 會讓檔案再開時整張圖散掉 */
+          var sup = document.createElement('sup'); sup.className = 'annoPrintNo'; sup.textContent = '[' + (i+1) + ']';
+          host.appendChild(sup); } }
       var d = document.createElement('div'); d.className = 'sa' + (a.resolved ? ' ok' : '');
       var head = document.createElement('b');
       head.textContent = '[' + (i+1) + '] ' + icons[a.color] + ' ' + annoLabel(a) + (a.resolved ? T.resolvedMark : '');
@@ -1657,7 +1690,7 @@ renderAll();
 
 /* ================= 閱讀器本體 ================= */
 (function(){
-var VER = 'v4.1';
+var VER = 'v4.2';
 var RECENTS_KEY = 'annoReader::recents';
 var DOC_PREFIX = 'annoReader::doc::';
 var LANG_KEY = 'annoReader::lang';
@@ -1894,7 +1927,14 @@ function stripAnnoRules(css){
 }
 
 function cleanDocument(html){
+  /* 這一步一定要在 parseFromString 之前:<sup class="annoPrintNo"> 會中斷 SVG 的解析,
+     等拿到 DOM 才清就來不及了 —— 圖那時候已經被切爛。 */
+  html = html.replace(/<sup class="annoPrintNo">[^<]*<\/sup>/g, '');
   var doc = new DOMParser().parseFromString(html, 'text/html');
+  /* 舊檔案在 SVG 裡留下的 mark 一律拆掉(它們本來就渲染不出來);標註資料仍在 annoPreset,
+     留言不會掉,只是那幾則之後會列為找不到位置。 */
+  doc.querySelectorAll('svg mark.anno').forEach(function(m){
+    var par = m.parentNode; while(m.firstChild) par.insertBefore(m.firstChild, m); par.removeChild(m); });
   /* 內嵌的標記資料(純 JSON,不會執行)保留,交給引擎合併;其餘 script 全部移除 */
   doc.querySelectorAll('script').forEach(function(s){
     if(s.id === 'annoPreset' && s.type === 'application/json') return;
