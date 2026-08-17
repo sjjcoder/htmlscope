@@ -50,11 +50,12 @@
 - **i18n**：外殼與引擎各持一份字典（`SHELL_I18N`／引擎內 `I18N`），共用 localStorage key `annoReader::lang`；介面文字一律由 `applyShellLang()`／`applyI18n()` 填入，**不要**寫死在 HTML 或 `ENGINE_UI` 字串裡。新增介面文字時兩種語言都要補
 - **彈出視窗共用外觀**：`.anno-modal-ov`(遮罩+置中)／`.anno-modal-bx`(卡片)＋`.pm-head`/`.pm-hint`/`.pm-foot`，🤖修改指令與🔍比較版本兩個 modal 共用同一套；新增 modal 沿用這組 class，不要重寫外觀
 - **版本比對(diff)**：`saveBaseline()`/`loadBaseline()` 存取 `KEY::baseline`(全文快照+時間戳,純本機、不烙進含標記版)；`diffWords()` 走自寫字詞級 Myers diff(`myersDiffCapped`+`backtrackDiff`),差異或文件過大時退回 `prefixSuffixDiff`(共同前綴/後綴+中段整塊替換,O(N+M) 保底,避免卡頓)
+- **列印是獨立的一套渲染,改動前先讀這條**：瀏覽器列印預設**不印背景色、卻照印文字色**。所以 ①螢光標記(靠 `background-color`)預設印不出來 → `mark.anno` 用 `print-color-adjust:exact` 單獨強制 + 底線雙保險；②深色文件會變成白紙上的淺灰字(實測對比 1.21:1,整份形同空白) → `beforeprint` 量底色亮度,偏暗才掛 `anno-print-light` 強制白底深字,淺色文件不動；③烙進內文的 `[n]` 編號與文末靜態對照表**是一組的,不可以只藏一個**(曾經只藏對照表,結果紙上全是孤兒編號)
 - **使用說明的示意圖用純 HTML/CSS(`.ug-*`),不要用真實截圖** — UI 仍在快速迭代,螢幕截圖會不斷過期、需要重截；CSS 示意圖改文字幾個字就跟上,不會過期。兩份圖各自寫在 `SHELL_I18N.zh.tips` / `.en.tips` 字串裡(非即時雙語切換,兩語言各自完整一份)
 
 ## 已知雷
 
-1. **文件自帶舊版標註 CSS 會打架** — `cleanDocument` 已拆除（regex 要迴圈跑：相鄰規則共用 `}` 邊界，單次 replace 會隔條漏刪）
+1. **文件自帶舊版標註 CSS 會打架** — `cleanDocument` 拆除。**注意這裡曾長期只修好一半**：舊的單一 regex 跨不過 `@media …{` 的左大括號，所以寫在 `@media` 裡的規則永遠掃不到（實測一份使用者檔案殘留 27 條、全在 `@media` 內，其中舊的 `@media print{#annoStaticApp{display:none}}` 還會抵銷 v4.1 的列印修正）。現在改用會數大括號、遞迴進 at-rule 的 `stripAnnoRules()`；注入的引擎樣式也帶 `id="annoEngineCss"`，v4.1 之後的檔案可以整塊移除。**改動這裡務必同時測 `@media` 內的規則**
 2. **舊版《分配書 v6.3》內嵌單-note 格式標註** — 閱讀器開啟時自動搬移其 localStorage（key `agenthub-anno-v6.3`）
 3. **同標題不同文件會共用標記庫**（title-hash 索引的代價，換取來回傳遞的連續性）
 4. 相對路徑圖片不顯示（iframe 無 base URL）；文件快取上限 1.5MB

@@ -258,8 +258,23 @@ var ENGINE_CSS = [
 '#annoStaticApp blockquote{margin:4px 0;padding:3px 10px;border-left:3px solid var(--aln);color:var(--amut);font-size:12.5px}',
 '#annoStaticApp .m{margin:2px 0 2px 14px;white-space:pre-wrap}',
 '#annoStaticApp .m b{color:var(--amut);font-weight:400;font-size:11.5px}',
-'@media print{#annoStaticApp{display:none!important}}',
+/* 列印。三件事,每一件都是實測踩到的:
+   ① 靜態附錄以前在列印時被 display:none —— 但烙進內文的 [n] 編號沒有一起藏,
+      結果沒有 JS 的環境列印出來滿頁孤兒編號、卻找不到對應的註解清單。編號與清單是一組的,
+      要嘛都印要嘛都不印;有 JS 時引擎載入就已經把靜態附錄整個移除了,所以這裡不需要再藏。
+   ② 螢光標記靠 background-color,而瀏覽器列印預設不印背景(背景圖形選項預設關閉),
+      所以標記在紙上會整個消失 —— 標註工具印出來沒有標註。用 print-color-adjust:exact
+      單獨強制標記的底色要印,再加底線當作雙保險(有些 PDF 產生器不支援這個屬性)。
+   ③ 深色文件的災難:瀏覽器不印背景卻照印文字色,深色主題一到紙上就變成白紙上的淺灰字
+      (實測某份深色報告對比只有 1.21:1,整份形同空白)。beforeprint 會偵測底色,
+      深色才掛上 anno-print-light,淺色文件完全不動。 */
 '@media print{#annoBar,#annoPop,#annoPanel,#annoToggle{display:none!important}#annoPrintApp{display:block;page-break-before:always}}',
+'@media print{mark.anno{-webkit-print-color-adjust:exact;print-color-adjust:exact;border-bottom:1.5px solid rgba(0,0,0,.45)}}',
+'@media print{html.anno-print-light,html.anno-print-light body{background:#fff!important}',
+'html.anno-print-light body *{background-color:transparent!important;color:#111!important;border-color:#999!important}',
+'html.anno-print-light mark.anno{-webkit-print-color-adjust:exact;print-color-adjust:exact}',
+'html.anno-print-light mark.anno.c-y{background:#ffe9a8!important}html.anno-print-light mark.anno.c-r{background:#ffd4cf!important}',
+'html.anno-print-light mark.anno.c-g{background:#cfeddb!important}html.anno-print-light mark.anno.c-b{background:#d3e4ff!important}}',
 '@media (pointer: coarse){#annoBar{gap:8px;padding:8px 10px}#annoBar button{padding:6px 12px;font-size:14px}#annoPop{width:min(300px,calc(100vw - 24px))}#annoPanel{width:min(350px,calc(100vw - 24px))}}',
 '.anno-modal-ov{position:fixed;inset:0;z-index:2147483002;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px}',
 '.anno-modal-ov[hidden]{display:none!important}',
@@ -1181,6 +1196,10 @@ function persistEdited(){
 /* 列印:標記處加編號上標,文末附「標註註解」對照表(印完自動移除) */
 var printAdded = [];
 window.addEventListener('beforeprint', function(){
+  /* 先清掉上一次列印的殘留:afterprint 在部分瀏覽器/取消列印時不會觸發,
+     不清的話連按兩次列印會疊出兩份對照表與兩組編號。 */
+  printAdded.forEach(function(el){ el.remove(); }); printAdded = [];
+  markPrintTheme();
   var icons = { y:'🟡', r:'🔴', g:'🟢', b:'🔵' };
   var sorted = annos.filter(function(a){ return !a.orphan && a.thread.length; }).sort(function(a,b){ return a.start - b.start; });
   if(!sorted.length) return;
@@ -1201,7 +1220,29 @@ window.addEventListener('beforeprint', function(){
     app.appendChild(d); });
   document.body.appendChild(app); printAdded.push(app); });
 window.addEventListener('afterprint', function(){
-  printAdded.forEach(function(el){ el.remove(); }); printAdded = []; });
+  printAdded.forEach(function(el){ el.remove(); }); printAdded = [];
+  document.documentElement.classList.remove('anno-print-light'); });
+
+/* 深色文件列印補償:量文件實際的底色,只有偏暗時才掛上 anno-print-light。
+   量的是 body 往上疊出來的有效底色(很多文件把顏色放在 body 而不是 html)。 */
+function markPrintTheme(){
+  var dark = false;
+  try{
+    var el = document.body, bg = null;
+    while(el){
+      var c = getComputedStyle(el).backgroundColor;
+      var m = c && c.match(/[\d.]+/g);
+      if(m && (m.length < 4 || parseFloat(m[3]) > 0.5)){ bg = m; break; }
+      el = el.parentElement;
+    }
+    if(bg){
+      var f = function(v){ v = v/255; return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); };
+      var L = 0.2126*f(+bg[0]) + 0.7152*f(+bg[1]) + 0.0722*f(+bg[2]);
+      dark = L < 0.35;                       /* 底色偏暗 → 文字必然是淺色,印在白紙上會消失 */
+    }
+  }catch(e){}
+  document.documentElement.classList.toggle('anno-print-light', dark);
+}
 
 /* 一頁式標註報告:引句+對話串+狀態,人類可讀,適合貼會議紀錄或存檔 */
 function exportReport(){
@@ -1616,7 +1657,7 @@ renderAll();
 
 /* ================= 閱讀器本體 ================= */
 (function(){
-var VER = 'v4.0';
+var VER = 'v4.1';
 var RECENTS_KEY = 'annoReader::recents';
 var DOC_PREFIX = 'annoReader::doc::';
 var LANG_KEY = 'annoReader::lang';
@@ -1812,19 +1853,53 @@ function getRecents(){ try{ return JSON.parse(localStorage.getItem(RECENTS_KEY) 
 function setRecents(r){ try{ localStorage.setItem(RECENTS_KEY, JSON.stringify(r)); }catch(e){} }
 
 /* 清理文件:移除 script、事件屬性、javascript: 連結、殘留的舊標註介面 */
+/* 把舊引擎的 CSS 規則從一段樣式文字裡拆掉。
+
+   為什麼不用單一 regex:原本寫成 /(^|})\s*[^{}]*(?:#anno|…)[^{}]*\{[^}]*\}/,
+   選擇器前面那段 [^{}]* 跨不過 "@media …{" 的左大括號,所以**寫在 @media 裡的規則永遠掃不到**。
+   實測一份舊版匯出的檔案殘留 27 條規則,全部在 @media(深色模式/列印/pointer:coarse)內,
+   其中那條舊的 @media print{#annoStaticApp{display:none}} 還會反過來抵銷新引擎的列印修正。
+   而且原本的樣式清單漏了 .annoPrintNo、.anno-menu、.anno-modal-* 這幾族,根本沒列進去。
+
+   改成自己數大括號、遞迴進 at-rule。#anno / .anno 後面要求接大寫字母或連字號,
+   避免誤刪文件自己的 .announcement 之類的 class。 */
+function stripAnnoRules(css){
+  var SEL = /(?:^|[\s,>+~])(?:[#.]anno(?=[A-Z-])|mark\.anno|\.ap-|\.ug-|\.bdot|\.fdot|button\.c-[yrgb]|\.dot\.c-[yrgb])/;
+  function walk(t){
+    var out = '', i = 0;
+    while(i < t.length){
+      var open = t.indexOf('{', i);
+      if(open < 0){ out += t.slice(i); break; }
+      var head = t.slice(i, open);
+      var depth = 1, j = open + 1;
+      while(j < t.length && depth){                       /* 找到這一塊真正的結尾 */
+        if(t[j] === '{') depth++; else if(t[j] === '}') depth--;
+        j++; }
+      var body = t.slice(open + 1, j - 1);
+      if(head.indexOf('@') >= 0){                          /* at-rule:遞迴清內部 */
+        var inner = walk(body);
+        if(inner.trim()) out += head + '{' + inner + '}';   /* 內容被清空的 @media 整塊丟掉 */
+      } else if(!SEL.test(head)){
+        out += head + '{' + body + '}';
+      }
+      i = j; }
+    return out; }
+  return walk(css);
+}
+
 function cleanDocument(html){
   var doc = new DOMParser().parseFromString(html, 'text/html');
   /* 內嵌的標記資料(純 JSON,不會執行)保留,交給引擎合併;其餘 script 全部移除 */
   doc.querySelectorAll('script').forEach(function(s){
     if(s.id === 'annoPreset' && s.type === 'application/json') return;
     s.remove(); });
-  /* 文件若帶著舊版標註功能的 CSS(如分配書 v6.3 內建版),會跟注入的新引擎樣式打架 → 把那些規則拆掉 */
+  /* 文件帶著舊版引擎 CSS 時會跟新注入的樣式打架。v4.1 起引擎樣式帶 id,可以整塊移除;
+     更早匯出的檔案沒有 id,只能逐條掃 —— 見 stripAnnoRules 的說明。 */
+  doc.querySelectorAll('style#annoEngineCss').forEach(function(st){ st.remove(); });
   doc.querySelectorAll('style').forEach(function(st){
-    if(st.textContent.indexOf('#annoBar') < 0) return;
-    var re = /(^|})\s*[^{}]*(?:#anno|mark\.anno|\.ap-|\.bdot|\.fdot|button\.c-[yrgb]|\.dot\.c-[yrgb])[^{}]*\{[^}]*\}/g;
-    var t = st.textContent, prev;
-    do{ prev = t; t = t.replace(re, '$1'); }while(t !== prev); /* 相鄰規則共用 } 邊界,要反覆掃到沒東西可刪 */
-    st.textContent = t; });
+    if(st.textContent.indexOf('#annoBar') < 0) return;      /* 只碰明顯是引擎產出的樣式塊 */
+    var t = stripAnnoRules(st.textContent);
+    if(t.trim()) st.textContent = t; else st.remove(); });
   ['annoBar','annoPop','annoPanel','annoToggle','annoFile','annoResize','annoPrintApp','annoStaticApp','annoPromptOverlay','annoDiffOverlay','annoLegendMenu','annoExportMenu','annoAiMenu','annoToast'].forEach(function(id){
     var el = doc.getElementById(id); if(el) el.remove(); });
   doc.querySelectorAll('.annoPrintNo').forEach(function(el){ el.remove(); });
@@ -1836,7 +1911,7 @@ function cleanDocument(html){
 }
 
 function buildInjection(key, name){
-  return '<style>' + ENGINE_CSS + '</style>' + ENGINE_UI +
+  return '<style id="annoEngineCss">' + ENGINE_CSS + '</style>' + ENGINE_UI +
     '<scr' + 'ipt>window.__ANNO_KEY=' + JSON.stringify(key) + ';window.__ANNO_NAME=' + JSON.stringify(name) + '</scr' + 'ipt>' +
     '<scr' + 'ipt>(' + ENGINE.toString() + ')()</scr' + 'ipt>';
 }
