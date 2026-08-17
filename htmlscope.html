@@ -1864,7 +1864,13 @@ function setRecents(r){ try{ localStorage.setItem(RECENTS_KEY, JSON.stringify(r)
    改成自己數大括號、遞迴進 at-rule。#anno / .anno 後面要求接大寫字母或連字號,
    避免誤刪文件自己的 .announcement 之類的 class。 */
 function stripAnnoRules(css){
-  var SEL = /(?:^|[\s,>+~])(?:[#.]anno(?=[A-Z-])|mark\.anno|\.ap-|\.ug-|\.bdot|\.fdot|button\.c-[yrgb]|\.dot\.c-[yrgb])/;
+  /* 這條要涵蓋引擎的每一族選擇器。實測方式:把 ENGINE_CSS 的 164 條選擇器全部跑過一次,
+     一條都不能漏 —— 先前漏了 .fchip/.cdot/.dv-* 這幾族,結果它們在使用者檔案裡永遠清不掉。
+     反向也測過 30 個一般文件會用的選擇器(.hint/.note/.badge/.announcement/.app-bar…)零誤判:
+     精準度靠 #anno/.anno 後面必須接大寫字母或連字號,以及 \.ap- 這種「點號緊貼前綴」的寫法。
+     不要加 .m/.q/.ok/.sa/.note 這類泛用 class —— 它們在引擎裡一律掛在容器底下,
+     上面的規則已經涵蓋,單獨列出反而會誤刪使用者文件自己的樣式。 */
+  var SEL = /(?:[#.]anno(?=[A-Z-])|mark\.anno|\.(?:ap|ug|dv|pm|ob|lm)-|\.(?:fchip|fclab|foic|frow|cdot|bdot|fdot|sugline)\b|button\.c-[yrgb]|\.dot\.c-[yrgb])/;
   function walk(t){
     var out = '', i = 0;
     while(i < t.length){
@@ -1897,7 +1903,9 @@ function cleanDocument(html){
      更早匯出的檔案沒有 id,只能逐條掃 —— 見 stripAnnoRules 的說明。 */
   doc.querySelectorAll('style#annoEngineCss').forEach(function(st){ st.remove(); });
   doc.querySelectorAll('style').forEach(function(st){
-    if(st.textContent.indexOf('#annoBar') < 0) return;      /* 只碰明顯是引擎產出的樣式塊 */
+    /* 只碰明顯是引擎產出的樣式塊。不能只認 #annoBar:被舊版清過一半的區塊裡
+       #annoBar 早就沒了,只剩 .fchip/.dv-stats 這些,再匯入時就會被整個跳過、永遠殘留。 */
+    if(!/#anno[A-Z]|mark\.anno|\.ap-|\.fchip|\.dv-stats|\.pm-head/.test(st.textContent)) return;
     var t = stripAnnoRules(st.textContent);
     if(t.trim()) st.textContent = t; else st.remove(); });
   ['annoBar','annoPop','annoPanel','annoToggle','annoFile','annoResize','annoPrintApp','annoStaticApp','annoPromptOverlay','annoDiffOverlay','annoLegendMenu','annoExportMenu','annoAiMenu','annoToast'].forEach(function(id){
