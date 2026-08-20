@@ -134,7 +134,7 @@ body.reading #view{display:block}
 </div></div>
 
 <script>
-/* ================= 標註引擎（會被注入到文件 iframe / 含標記版檔案裡） ================= */
+/* ================= 標註引擎（會被注入到文件 iframe / 傳閱版檔案裡） ================= */
 var ENGINE_CSS = [
 /* 深淺色自動切換:UI 全部走這組變數 */
 '#annoBar,#annoPop,#annoPanel,#annoToggle,#annoStaticApp,#annoPromptOverlay,#annoDiffOverlay,#annoToast,.anno-menu{--as:#fff;--atx:#222;--amut:#888;--aln:#ccc;--achip:#f0f0f0;--amsg:#f4f4f4;--aacc:#0e7b6c;--adelb:#fdeceb;--adelt:#b4372e}',
@@ -399,7 +399,7 @@ function ENGINE(){
 var KEY = window.__ANNO_KEY || 'anno::standalone::' + (document.title || 'doc');
 var NAME = window.__ANNO_NAME || document.title || 'document';
 var UI = '#annoBar,#annoPop,#annoPanel,#annoToggle,#annoPromptOverlay,#annoDiffOverlay,#annoLegendMenu,#annoExportMenu,#annoAiMenu,#annoToast';
-/* ---- 雙語字典:跟著 ENGINE.toString() 進含標記版,收件人依自己的偏好/瀏覽器語言顯示 ---- */
+/* ---- 雙語字典:跟著 ENGINE.toString() 進傳閱版,收件人依自己的偏好/瀏覽器語言顯示 ---- */
 var I18N = {
  zh: {
   dl:'zh-TW', hl:'zh-Hant', sep:'：',
@@ -412,7 +412,7 @@ var I18N = {
   tog:'標註', resizeTitle:'拖曳調整大小', panel:'標註清單',
   authorBtn:'👤 名稱', langBtn:'🌐 EN', legendBtn:'🎨 顏色',
   authorTitle:'設定你的顯示名稱(會出現在你的留言旁邊)',
-  down:'⬇ 含標記版', downTitle:'把文件和你的所有標記打包成一個檔,對方直接打開就能看、能回覆',
+  down:'⬇ 傳閱版', downTitle:'把文件和你的所有標記打包成一個檔,對方直接打開就能看、能回覆',
   report:'📄 報告', reportTitle:'產出一頁式標註摘要,適合貼進會議紀錄',
   legendTitle:'選擇或自訂四色螢光筆各代表什麼意思',
   edit:'✏️ 直接改字', editDone:'✔ 完成修改', editTitle:'我自己直接改文件的文字，按下去就立即生效，不用等任何人同意、也不會留下標註 — 適合修錯字。要跟別人討論、或要交給 AI 去改的內容，請改用標記裡的「💡 提議改成…」',
@@ -427,8 +427,8 @@ var I18N = {
   tipClear:'刪除這份文件的全部標註', tipToggle:'打開或收起所有標註的清單',
   tipRes:'把這則標註標記為已處理', tipDel:'刪除這則標註和它的所有留言', tipSave:'送出這則留言',
   clear:'🗑 清空', searchPh:'搜尋標註…',
-  hint:'選取文字即可新增標註；點標註可回覆/改顏色/✓解決/刪除。標記存在此瀏覽器；要傳給同事或換電腦，按「⬇ 含標記版」打包帶走。',
-  noStorage:'⚠ 此瀏覽器無法自動儲存標註（localStorage 被封鎖）— 離開前請務必按「⬇ 含標記版」保存,下次直接開啟那個檔案。',
+  hint:'選取文字即可新增標註；點標註可回覆/改顏色/✓解決/刪除。標記存在此瀏覽器；要傳給同事或換電腦，按「⬇ 傳閱版」打包帶走。',
+  noStorage:'⚠ 此瀏覽器無法自動儲存標註（localStorage 被封鎖）— 離開前請務必按「⬇ 傳閱版」保存,下次直接開啟那個檔案。',
   anon:'匿名',
   namePrompt:'你的名字（會顯示在你的註解上，可留空）',
   nameChange:'顯示名稱（會出現在你的註解上）',
@@ -471,7 +471,7 @@ var I18N = {
   repTitle:'{name} 標註報告', repH1:'📋 標註報告',
   repMeta:'{name} · 產出於 {d} · 共 {n} 筆標註,未解決 {o} 筆',
   repNone:'（沒有標註）', stRes:'✓ 已解決', stOpen:'● 未解決',
-  sfxAnno:'_標記版', sfxRep:'_標註報告',
+  sfxAnno:'_傳閱版', sfxRep:'_標註報告',
   sfxAnnoNote:'<br>檔案比原稿大是正常的 —— 標註工具一起包進去了,對方不用安裝任何東西,直接用瀏覽器打開就能看標記、也能回覆。標完傳回來給你,兩邊的留言會自動合併。',
   langTitle:'Switch to English',
   pmBtn:'🤖 修改指令', pmTitle:'AI 修改指令',
@@ -602,7 +602,7 @@ function migrate(a){
   if(a.resolved === undefined) a.resolved = false;
   return a; }
 annos.forEach(migrate);
-/* 刪除紀錄(墓碑):避免已刪的標註在重開含標記版時又跑回來 */
+/* 刪除紀錄(墓碑):避免已刪的標註在重開傳閱版時又跑回來 */
 function tombs(){ try{ return JSON.parse(localStorage.getItem(KEY + '::del') || '[]'); }catch(e){ return []; } }
 function addTombs(ids){ try{ var t = tombs(); ids.forEach(function(i){ if(t.indexOf(i) < 0) t.push(i); }); localStorage.setItem(KEY + '::del', JSON.stringify(t)); }catch(e){} }
 /* 合併外來標記:同一條標註的留言逐則合併,誰的話都不會被蓋掉 */
@@ -621,7 +621,7 @@ function mergeIn(arr, ignoreTombs){
     cur.thread.sort(function(a,b){ return (a.ts || 0) - (b.ts || 0); });
     cur.resolved = cur.resolved || !!inc.resolved;
     if(inc.suggestion && !cur.suggestion) cur.suggestion = inc.suggestion; }); }
-/* 含標記版檔案:把內嵌的標記資料併入(v2 格式含圖例) */
+/* 傳閱版檔案:把內嵌的標記資料併入(v2 格式含圖例) */
 var pre = document.getElementById('annoPreset'), presetLegend = null;
 if(pre){ try{
   var pj = JSON.parse(pre.textContent);
@@ -896,7 +896,7 @@ function acceptSuggestion(a){
   var before = a.quote, after = a.suggestion;
   if(!replaceMarkText(a, after)){ toast(T.sugOrphan); return; }
   a.applied = { from: before, to: after, by: getAuthor(), ts: Date.now() };
-  /* 寫進對話串:這樣痕跡會跟著含標記版傳給別人,也會出現在報告/Markdown/JSON 匯出裡 */
+  /* 寫進對話串:這樣痕跡會跟著傳閱版傳給別人,也會出現在報告/Markdown/JSON 匯出裡 */
   a.thread.push({ id: uid() + 'm', author: getAuthor(), sys: true,
     text: F(T.sugAppliedLog, { from: before, to: after }), ts: Date.now() });
   delete a.suggestion;
@@ -1190,14 +1190,14 @@ function setLang(l, fromShell){
   /* 依目前預設模式在新語言下重解析圖例(general/ai 會跟著翻譯,custom/檔案帶的維持不變) */
   LEGEND = resolveLegend(); fillLegend();
   closePop(); applyI18n(); updatePanel();
-  /* 在閱讀器裡開的話,同步外殼的語言(含標記版單獨開啟時 parent 就是自己,跳過) */
+  /* 在閱讀器裡開的話,同步外殼的語言(傳閱版單獨開啟時 parent 就是自己,跳過) */
   if(!fromShell){ try{
     if(window.parent && window.parent !== window && window.parent.__scopeSetLang) window.parent.__scopeSetLang(l, true);
   }catch(e){} } }
 window.__annoSetLang = setLang;
 document.getElementById('annoLang').addEventListener('click', function(){ setLang(L === 'zh' ? 'en' : 'zh'); });
 
-/* ✏️ 編輯模式:直接修改文件文字;完成後標記自動重新對位,改動存回快取並跟著「⬇ 含標記版」 */
+/* ✏️ 編輯模式:直接修改文件文字;完成後標記自動重新對位,改動存回快取並跟著「⬇ 傳閱版」 */
 editBtn.addEventListener('click', function(){
   editing = !editing;
   if(editing){
@@ -1307,7 +1307,7 @@ function exportReport(){
     (rows || '<p>' + T.repNone + '</p>') + '</body></html>';
   var blob = new Blob([out], { type: 'text/html' });
   var u = URL.createObjectURL(blob), el = document.createElement('a');
-  el.href = u; el.download = NAME.replace(/\.html?$/i, '').replace(/_(標記版|annotated)$/i, '') + T.sfxRep + '.html';
+  el.href = u; el.download = NAME.replace(/\.html?$/i, '').replace(/_(標記版|傳閱版|annotated)$/i, '') + T.sfxRep + '.html';
   el.click(); URL.revokeObjectURL(u); savedToast(el.download, out.length); }
 
 /* 下載完成提示:講清楚「成功了、檔名、存到下載資料夾」(使用者原本完全不知道有沒有成功) */
@@ -1320,7 +1320,7 @@ function savedToast(fname, bytes, extraHtml){
 function downloadText(text, ext, mime){
   var blob = new Blob([text], { type: mime });
   var u = URL.createObjectURL(blob), el = document.createElement('a');
-  el.href = u; el.download = NAME.replace(/\.html?$/i, '').replace(/_(標記版|annotated)$/i, '') + T.exSfx + ext;
+  el.href = u; el.download = NAME.replace(/\.html?$/i, '').replace(/_(標記版|傳閱版|annotated)$/i, '') + T.exSfx + ext;
   el.click(); URL.revokeObjectURL(u); savedToast(el.download, text.length); }
 function buildMarkdown(){
   var sorted = annos.slice().sort(function(a,b){ return a.start - b.start; });
@@ -1426,12 +1426,12 @@ promptOverlay.querySelector('.pm-copy').addEventListener('click', function(){
 promptOverlay.querySelector('.pm-dl').addEventListener('click', function(){
   var blob = new Blob([promptTA.value], { type: 'text/markdown' });
   var u = URL.createObjectURL(blob), el = document.createElement('a');
-  el.href = u; el.download = NAME.replace(/\.html?$/i, '').replace(/_(標記版|annotated)$/i, '') + T.pmSfx + '.md';
+  el.href = u; el.download = NAME.replace(/\.html?$/i, '').replace(/_(標記版|傳閱版|annotated)$/i, '') + T.pmSfx + '.md';
   el.click(); URL.revokeObjectURL(u); savedToast(el.download, promptTA.value.length); });
 
 /* 🔍 版本比對:記錄一個「基準版本」的全文快照,之後跟目前全文比較,顯示 AI(或你自己)這一輪改了什麼。
    基準會在①第一次開啟文件、②每次產生修改指令時自動存(存的是「送去給 AI 之前」的樣子);
-   純本機、不烙進含標記版 —— 這是個人編修輔助,不是跨人協作資料。 */
+   純本機、不烙進傳閱版 —— 這是個人編修輔助,不是跨人協作資料。 */
 var BASE_KEY = KEY + '::baseline';
 function saveBaseline(){ try{ localStorage.setItem(BASE_KEY, JSON.stringify({ text: fullText(), ts: Date.now() })); }catch(e){} }
 function loadBaseline(){ try{ var raw = localStorage.getItem(BASE_KEY); return raw ? JSON.parse(raw) : null; }catch(e){ return null; } }
@@ -1522,7 +1522,7 @@ diffOverlay.querySelector('.dv-update').addEventListener('click', function(){ sa
 /* 首次開啟這份文件、尚無基準版本時,自動存一份「初見樣貌」當預設起點,讓比較功能在沒用過修改指令時也有東西可比 */
 if(!loadBaseline()) saveBaseline();
 
-/* 從文件本身(含目前的文字編輯)產出「含標記版」:對方不用閱讀器也能繼續傳遞。
+/* 從文件本身(含目前的文字編輯)產出「傳閱版」:對方不用閱讀器也能繼續傳遞。
    螢光標記直接烙進 HTML+文末附靜態對照表 → 手機/信件預覽等不執行 JS 的環境也看得到;
    正常瀏覽器開啟時引擎會清掉靜態附錄、由互動功能接管。 */
 function buildStandalone(){
@@ -1580,7 +1580,7 @@ document.getElementById('annoDown').addEventListener('click', function(){
   var out = buildStandalone();
   var blob = new Blob([out], { type: 'text/html' });
   var u = URL.createObjectURL(blob), el2 = document.createElement('a');
-  el2.href = u; el2.download = NAME.replace(/\.html?$/i, '').replace(/_(標記版|annotated)$/i, '') + T.sfxAnno + '.html';
+  el2.href = u; el2.download = NAME.replace(/\.html?$/i, '').replace(/_(標記版|傳閱版|annotated)$/i, '') + T.sfxAnno + '.html';
   el2.click(); URL.revokeObjectURL(u);
   /* 額外說明檔案為何變大 + 下一步怎麼做(實測有人看到 2KB→97KB 以為壞了、也有人不敢傳出去) */
   savedToast(el2.download, out.length, T.sfxAnnoNote); });
@@ -1689,8 +1689,8 @@ document.getElementById('annoResize').addEventListener('mousedown', function(e){
   document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up); });
 
 applyI18n();
-/* 語言鈕:在閱讀器裡由外層頂欄提供,面板這顆隱藏以免重複;獨立開啟含標記版時(無外層)才顯示。
-   每次載入都明確設定,避免含標記版把閱讀器裡的 display:none 一起烙進去。 */
+/* 語言鈕:在閱讀器裡由外層頂欄提供,面板這顆隱藏以免重複;獨立開啟傳閱版時(無外層)才顯示。
+   每次載入都明確設定,避免傳閱版把閱讀器裡的 display:none 一起烙進去。 */
 var hasShell = false; try{ hasShell = window.parent !== window && !!window.parent.__scopeSetLang; }catch(e){}
 document.getElementById('annoLang').style.display = hasShell ? 'none' : '';
 /* JS 有在跑 → 互動功能接管,收掉給無 JS 環境看的靜態附錄與編號 */
@@ -1700,7 +1700,7 @@ renderAll();
 
 /* ================= 閱讀器本體 ================= */
 (function(){
-var VER = 'v4.3';
+var VER = 'v4.4';
 var RECENTS_KEY = 'annoReader::recents';
 var DOC_PREFIX = 'annoReader::doc::';
 var LANG_KEY = 'annoReader::lang';
@@ -1712,7 +1712,7 @@ var current = null; /* {key, name, cleanHTML} */
 var SHELL_I18N = {
  zh: {
   hl:'zh-Hant', title:'HTMLScope · HTML 標註閱讀器', sub:'HTML 標註閱讀器',
-  home:'🏠 回列表', open:'📂 開啟 HTML', save:'⬇ 下載含標記版',
+  home:'🏠 回列表', open:'📂 開啟 HTML', save:'⬇ 下載傳閱版',
   tHome:'回到檔案列表(你的標記都會保留)', tOpen:'打開一個 HTML 檔案來閱讀和標註', tEdit:'直接修改文件裡的文字內容', tSave:'把文件和你的標記打包成一個檔,可傳給別人',
   lang:'🌐 EN', langTitle:'Switch to English',
   dropBig:'把 HTML 檔案拖到這裡', dropSub:'或點一下選擇檔案',
@@ -1739,7 +1739,7 @@ var SHELL_I18N = {
    '<p><b>核心用法就兩步：</b>選取文字 → 挑一個顏色，就能順手寫留言。下面兩張圖看完就會用了，其他功能需要時再展開。</p>'+
    '<div class="g30">30 秒看懂</div>'+
    '<div class="ug-flow">'+'<div class="ug-box ug-doc">…先前文字<mark>選取的文字</mark>後續文字…</div>'+'<span class="ug-arrow">→</span>'+'<div class="ug-box ug-bar"><i class="ug-dot" style="background:#f2c414"></i><i class="ug-dot" style="background:#e4574a"></i><i class="ug-dot" style="background:#3cb878"></i><i class="ug-dot" style="background:#4a90e2"></i></div>'+'<span class="ug-arrow">→</span>'+'<div class="ug-box ug-pop"><div class="ug-q">「選取的文字」</div><div class="ug-ta"></div><span class="ug-sendbtn">送出</span></div>'+'</div>'+'<div class="ug-cap">① 選取文字 → 挑一個顏色 → 視窗跳出，填名字、寫下留言</div>'+
-   '<div class="ug-flow ug-flow2">'+'<div class="ug-box ug-person"><div class="ug-who">你</div><div class="ug-fico">📄🖍</div></div>'+'<span class="ug-arrow">⬇ 含標記版<br>傳出</span>'+'<div class="ug-box ug-person"><div class="ug-who">同事</div><div class="ug-fico">📄🖍💬</div></div>'+'<span class="ug-arrow">⬇ 含標記版<br>傳回</span>'+'<div class="ug-box ug-person ug-merge"><div class="ug-who">合併後</div><div class="ug-fico">📄🖍🖍💬</div></div>'+'</div>'+'<div class="ug-cap">② 傳給對方 → 他直接打開回覆 → 傳回來，兩邊的留言自動合併，誰的都不會被蓋掉</div>'+
+   '<div class="ug-flow ug-flow2">'+'<div class="ug-box ug-person"><div class="ug-who">你</div><div class="ug-fico">📄🖍</div></div>'+'<span class="ug-arrow">⬇ 傳閱版<br>傳出</span>'+'<div class="ug-box ug-person"><div class="ug-who">同事</div><div class="ug-fico">📄🖍💬</div></div>'+'<span class="ug-arrow">⬇ 傳閱版<br>傳回</span>'+'<div class="ug-box ug-person ug-merge"><div class="ug-who">合併後</div><div class="ug-fico">📄🖍🖍💬</div></div>'+'</div>'+'<div class="ug-cap">② 傳給對方 → 他直接打開回覆 → 傳回來，兩邊的留言自動合併，誰的都不會被蓋掉</div>'+
    '<details>'+
    '<summary>📖 基本操作 <span class="cnt">開檔、標記、留言、傳給對方</span></summary><ul>'+
    '<li><b>開檔</b>：把 HTML 檔拖進虛線框（或點框選檔）。手上沒有 HTML 檔？用「✍ 直接貼上文字」把 Word／Google 文件／PDF 的內容貼進來就好</li>'+
@@ -1749,7 +1749,7 @@ var SHELL_I18N = {
    '<li><b>回覆別人</b>：點那條螢光標記 → 看到整串對話 → 輸入回覆「送出」，可一直接續</li>'+
    '<li><b>問題處理完</b>：按「✓ 解決」標記變淡、清單打勾（可「↩ 重新開啟」）</li>'+
    '<li><b>改顏色／刪除</b>：點標記後在小視窗操作；視窗擋到字時，按住頂端「⠿ 可拖曳」移開。按 ✕、Esc 或點空白處收起</li>'+
-   '<li><b>傳給對方</b>：按「⬇ 含標記版」產生一個新 HTML 檔傳出去。對方不用安裝任何東西，直接打開就看得到標記、也能回覆；他傳回來你打開，兩邊留言自動合併</li>'+
+   '<li><b>傳給對方</b>：按「⬇ 傳閱版」產生一個新 HTML 檔傳出去。對方不用安裝任何東西，直接打開就看得到標記、也能回覆；他傳回來你打開，兩邊留言自動合併</li>'+
    '<li><b>清單面板</b>（右下角 🖍，會顯示未解決數）：可搜尋、按顏色或「未解決」篩選，點任一筆跳到該位置；左上角可拖曳調大小</li></ul>'+
    '</details>'+
    '<details>'+
@@ -1767,10 +1767,10 @@ var SHELL_I18N = {
    '<li><b>看到「⚠ 這段原文已被改動」</b>：表示那段文字被你或 AI 改過，所以標記接不回原本的位置。<b>你的留言完全沒有不見</b>，只是位置對不上；想重新標的話，選取新的文字再標一次就好</li>'+
    '<li><b>看到「≈」符號</b>：原文被改寫過，系統依前後文幫你找回大概的位置，請確認標對了沒有</li>'+
    '<li><b>文件小幅修改</b>：標記會自動找回原本的位置，不用重標</li>'+
-   '<li><b>換電腦／換瀏覽器</b>：標記存在這台電腦的瀏覽器裡，換裝置請按「⬇ 含標記版」，開那個檔案就能接著用</li>'+
+   '<li><b>換電腦／換瀏覽器</b>：標記存在這台電腦的瀏覽器裡，換裝置請按「⬇ 傳閱版」，開那個檔案就能接著用</li>'+
    '<li><b>安全性</b>：載入的文件會先自動移除裡面的程式碼才顯示，收到來路不明的 HTML 也能安心開</li>'+
    '<li><b>列印／存 PDF</b>：用「📤 匯出 → 🖨 列印／存成 PDF」（或直接按 Ctrl+P），在列印視窗選「另存為 PDF」就能存檔；標記處會自動加編號、文末附上所有註解</li>'+
-   '<li><b>手機收到含標記版</b>：聊天軟體或信件的預覽視窗不會執行程式，但螢光標記和文末「📝 標註對照表」直接看得到；要回覆或加標，選「用瀏覽器開啟」即可</li>'+
+   '<li><b>手機收到傳閱版</b>：聊天軟體或信件的預覽視窗不會執行程式，但螢光標記和文末「📝 標註對照表」直接看得到；要回覆或加標，選「用瀏覽器開啟」即可</li>'+
    '<li><b>圖片沒顯示</b>：文件裡用相對路徑引用的外部圖片不會出現（圖片直接內嵌在檔案裡的 HTML 不受影響）</li></ul>'+
    '</details>'
  },
@@ -2052,7 +2052,7 @@ function renderRecents(){
     box.appendChild(d); });
 }
 
-/* 下載含標記版:交給文件內的引擎產出(會帶著文字編輯+標記+圖例) */
+/* 下載傳閱版:交給文件內的引擎產出(會帶著文字編輯+標記+圖例) */
 window.__buildAnnotated = function(){
   var w = view.contentWindow;
   return (w && w.__annoBuild) ? w.__annoBuild() : null; }; /* 供測試 */
