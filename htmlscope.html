@@ -203,7 +203,7 @@ var ENGINE_CSS = [
 '.ap-item.sug .badge{display:inline-block;font-size:10px;color:#0e7b6c;border:1px solid #0e7b6c;border-radius:4px;padding:0 4px;margin-right:4px;vertical-align:1px}',
 '.ap-item .sugline{color:#0e7b6c;font-size:12px;margin-top:2px}',
 '#annoToggle{position:fixed;right:18px;bottom:18px;z-index:2147482999;background:var(--aacc);color:#fff;border:none;border-radius:999px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.3)}',
-'#annoPanel{position:fixed;right:18px;bottom:64px;z-index:2147482999;width:350px;max-height:62vh;display:flex;flex-direction:column;background:var(--as);border:1px solid var(--aln);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.3);font-size:13px;color:var(--atx)}',
+'#annoPanel{position:fixed;right:18px;bottom:64px;z-index:2147482999;width:350px;max-height:62vh;overflow:hidden;display:flex;flex-direction:column;background:var(--as);border:1px solid var(--aln);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.3);font-size:13px;color:var(--atx)}',
 '#annoPanel .ap-head{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:10px 12px;border-bottom:1px solid var(--aln);font-weight:700}',
 '#annoPanel .ap-head .sp{margin-right:auto}',
 '#annoPanel .ap-head button{font-size:12px;background:var(--achip);border:1px solid var(--aln);border-radius:6px;padding:3px 8px;cursor:pointer;color:var(--atx);white-space:nowrap;flex:none}',
@@ -211,7 +211,7 @@ var ENGINE_CSS = [
 /* box-sizing 要自己指定:ENGINE_CSS 注入的是「使用者的文件」,而盒模型跟著那份文件走。沒有 *{box-sizing:border-box} 的文件裡,min-height:96 是內容高,再加上下 padding 12 變成 108,面板的 flex 分配就會多出 10px,把底部說明擠出面板外緣(實測溢出 9.6px)。 */
 '#annoList{overflow-y:auto;padding:6px;flex:1 1 auto;min-height:96px;box-sizing:border-box}',
 '#annoList .empty{padding:16px;color:var(--amut);text-align:center}',
-'#annoResize{position:absolute;left:-2px;top:-2px;width:18px;height:18px;cursor:nwse-resize;border-left:3px solid var(--amut);border-top:3px solid var(--amut);border-radius:12px 0 0 0;opacity:.45;z-index:1}',
+'#annoResize{position:absolute;left:0;top:0;width:18px;height:18px;cursor:nwse-resize;border-left:3px solid var(--amut);border-top:3px solid var(--amut);border-radius:12px 0 0 0;opacity:.45;z-index:1}',
 '#annoResize:hover{opacity:1;border-color:var(--aacc)}',
 '.ap-item{padding:8px 10px;border-radius:8px;cursor:pointer;border-bottom:1px solid var(--aln)}',
 '.ap-item:last-child{border-bottom:none}',
@@ -1636,14 +1636,24 @@ function clampPanelSize(){
   var L = panelLimits();
   panel.style.bottom = L.bot + 'px';
   panel.style.width = Math.min(wantW || 350, L.maxW) + 'px';   /* 350 = CSS 預設寬 */
-  if(wantH){ panel.style.height = Math.min(wantH, L.maxH) + 'px'; panel.style.maxHeight = 'none'; return; }
-  /* 沒有存過高度:預設維持 CSS 的 62vh,但短螢幕上「首次使用(引導條還在)」時 62vh 裝不下
-     標頭+引導條+篩選列+清單最小高+底部說明,溢出的部分會直接畫到面板外、蓋在文件上
-     (實測 573px 高的視窗溢出 110px)。所以在這個視窗放得下的範圍內,允許長到內容需要的高度。
-     scrollHeight 是內容高,不受 max-height 影響;面板隱藏時為 0,開啟時本函式會再跑一次。 */
-  panel.style.height = '';
-  var vh62 = Math.round(window.innerHeight * 0.62);
-  panel.style.maxHeight = Math.min(L.maxH, Math.max(vh62, panel.scrollHeight)) + 'px';
+  var hint = panel.querySelector('.ap-hint'); if(hint) hint.hidden = false;  /* 每次都先假設裝得下,重新量測 */
+  if(wantH){ panel.style.height = Math.min(wantH, L.maxH) + 'px'; panel.style.maxHeight = 'none'; }
+  else{
+    /* 沒有存過高度:預設維持 CSS 的 62vh,但短螢幕上「首次使用(引導條還在)」時 62vh 裝不下
+       標頭+引導條+篩選列+清單最小高+底部說明,所以在這個視窗放得下的範圍內,允許長到內容需要的高度。
+       scrollHeight 是內容高,不受 max-height 影響;面板隱藏時為 0,開啟時本函式會再跑一次。 */
+    panel.style.height = '';
+    var vh62 = Math.round(window.innerHeight * 0.62);
+    panel.style.maxHeight = Math.min(L.maxH, Math.max(vh62, panel.scrollHeight)) + 'px';
+  }
+  /* 就算長到能長的極限,還是有可能裝不下(例如使用者手動拖過的高度、或視窗矮到連清單的
+     min-height 96px 都擠不進去)。#annoPanel 現在有 overflow:hidden,裝不下的內容不會再
+     畫穿邊框蓋到下面的「標註」按鈕上,但會被裁切看不到。與其讓清單或篩選列被切一半,
+     優先犧牲最不重要的說明文字(.ap-hint 純粹是操作提示,別處也有說明)讓出空間。 */
+  /* 容錯值不能是 0:實測 scrollHeight 比 clientHeight 多算 1~2px(邊框計入方式的捨入差),
+     嚴格用 > 會讓完全不影響視覺的誤差也觸發隱藏,course 犧牲說明文字太浪費。
+     真正要處理的是「差一整行文字以上」的情況,6px 抓不到假警報又能抓到真的裝不下。 */
+  if(hint && panel.scrollHeight - panel.clientHeight > 6) hint.hidden = true;
 }
 clampPanelSize();
 /* 視窗被縮小時,所有用絕對座標定位的浮動元件都會失準:面板變成出界、註解視窗跟著飄出去、
@@ -1690,7 +1700,7 @@ renderAll();
 
 /* ================= 閱讀器本體 ================= */
 (function(){
-var VER = 'v4.2';
+var VER = 'v4.3';
 var RECENTS_KEY = 'annoReader::recents';
 var DOC_PREFIX = 'annoReader::doc::';
 var LANG_KEY = 'annoReader::lang';
