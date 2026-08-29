@@ -284,6 +284,9 @@ section{padding:72px 0}
 .cmp-table tr:last-child td,.cmp-table tbody tr:last-child td{border-bottom:none}
 .cmp-table .yes{color:var(--accent);font-weight:700}
 .cmp-table .no{color:var(--ink-3)}
+.cmp-note{margin-top:16px;padding:14px 18px;background:var(--accent-soft);border:1px solid var(--line-2);border-radius:10px;font-size:14px;line-height:1.6;color:var(--ink-2)}
+.cmp-note b{color:var(--ink)}
+.cmp-note a{color:var(--accent-ink);text-decoration:underline;text-decoration-color:var(--line-2)}
 
 /* final cta */
 .final{text-align:center;padding:96px 0}
@@ -574,6 +577,11 @@ footer{border-top:1px solid var(--line);padding:40px 0;color:var(--ink-3);font-s
         </tbody>
       </table>
     </div>
+    <p class="cmp-note" id="license">
+      <b data-en="Who this is free for:" data-zh="免費的對象：">Who this is free for:</b>
+      <span data-en=" personal use, academic research, and internal use at nonprofits or government agencies — no need to ask. A for-profit company using it for day-to-day team review counts as commercial use; " data-zh=" 個人使用、學術研究、非營利組織與政府機關內部使用完全免費，不用問。一般公司如果要在團隊裡日常拿來審閱文件，屬於商業使用，">personal use, academic research, and internal use at nonprofits or government agencies — no need to ask. A for-profit company using it for day-to-day team review counts as commercial use;</span>
+      <a href="https://github.com/sjjcoder/htmlscope/issues/new" data-en="contact the author first" data-zh="請先聯絡作者取得授權">contact the author first</a><span data-en=". Open source doesn't mean free for commercial use — see the " data-zh="。原始碼公開，不等於商業使用也免費——完整條款見 ">. Open source doesn't mean free for commercial use — see the </span><a href="https://github.com/sjjcoder/htmlscope/blob/main/LICENSE-zh.md" data-en="full terms" data-zh="LICENSE-zh.md">full terms</a><span data-en="." data-zh="。"></span>
+    </p>
   </section>
 
   <!-- FINAL CTA -->
@@ -586,7 +594,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;color:var(--ink-3);font-s
       <a class="btn ghost" href="htmlscope.html" data-en="▶ Or just try it in the browser" data-zh="▶ 或者先在瀏覽器裡試試">▶ 或者先在瀏覽器裡試試</a>
       <a class="btn ghost" href="https://github.com/sjjcoder/htmlscope" id="ghlink" data-en="View source on GitHub" data-zh="在 GitHub 看原始碼">View source on GitHub</a>
     </div>
-    <p class="fileline" data-en="One HTML file · ~70 KB · no dependencies · noncommercial license" data-zh="一個 HTML 檔 · 約 70 KB · 零依賴 · 非商業授權">One HTML file · ~70 KB · no dependencies · noncommercial license</p>
+    <p class="fileline"><span data-en="One HTML file · ~70 KB · no dependencies · " data-zh="一個 HTML 檔 · 約 70 KB · 零依賴 · ">One HTML file · ~70 KB · no dependencies · </span><a href="#license" data-en="noncommercial license — what that means" data-zh="非商業授權 — 這是什麼意思">noncommercial license — what that means</a></p>
   </section>
 </main>
 
