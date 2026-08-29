@@ -56,6 +56,8 @@
 - **使用說明的示意圖用純 HTML/CSS(`.ug-*`),不要用真實截圖** — UI 仍在快速迭代,螢幕截圖會不斷過期、需要重截；CSS 示意圖改文字幾個字就跟上,不會過期。兩份圖各自寫在 `SHELL_I18N.zh.tips` / `.en.tips` 字串裡(非即時雙語切換,兩語言各自完整一份)
 - **`index.html` 依賴 `htmlscope.html#paste` 這個 hash 約定**：產品頁「沒有 HTML 檔?直接貼上文字」連結直接連到這個 hash，工具頁載入時偵測到會自動開啟貼字視窗並清掉 URL 上的 hash（見 `openPaste()` 呼叫處附近）。**移除或重新命名貼字入口時記得回頭改 `index.html` 的連結**，兩邊沒有其他方式互相知會
 - **`legendMode`（顏色預設：一般審閱／AI 報告審閱／自訂）是跨文件共用的全域設定，不是每份文件各自獨立**（`localStorage` key `annoReader::legendPreset`）——切到 AI 審閱模式後，下一份完全無關的新文件也會沿用同一組色板（實測使用者拿來審閱同學報告時因此看到「事實錯誤／幻覺」這類看不懂的標籤）。目前刻意保留這個行為（跨文件沿用對持續審閱 AI 報告的人是合理預期），只在每次載入頁面第一次選字、且目前是 AI 模式時跳一次提示條說明可以怎麼切換（`aiLegendHintShown`）；**如果之後要改成每份文件各自獨立記憶，得另外存一把以文件為 key 的覆寫值，且要決定它跟 `presetLegend`（文件內嵌的圖例）之間的優先順序**
+- **`annoReader::author`（留言署名）跟 `annoReader::recents`／`annoReader::legendPreset` 一樣，是跨文件、跨分頁共用的全域 localStorage**——不是每份文件各自記憶。開留言視窗時會自動帶入上次用過的名字，如果同一台瀏覽器換人用（公用電腦、或這次可用性複測裡 7 個角色併發共用同一個 origin），會看到別人留下的名字，容易誤植送出。跟「最近開啟」清單同一套處理邏輯：不擋流程，只在每次載入頁面第一次開留言視窗、且欄位帶出非空值時提醒一次（`authorHintShown`）
+- **CSS 的 `@media` 覆寫規則，必須寫在 base rule 之後才會生效**——同樣 specificity 時 CSS cascade 是「後宣告的贏」，media query 條件成立不會讓規則自動加分。v4.8 曾把手機版的 `.ap-divider` 覆寫（`flex-basis:100%`）寫在桌面版 base rule（`flex:none`）**前面**，結果即使 `@media (pointer:coarse)` 確實 match，規則也完全沒套用，因為後出現的 base rule 贏了。**新增任何 `@media` 覆寫，先確認它在原始碼順序上排在被覆寫的那條規則之後**
 
 ## 已知雷
 

@@ -320,6 +320,13 @@ var ENGINE_CSS = [
 /* 面板標頭的分隔線:把「AI 修改指令/比較版本」這組跟其他一般文件動作在視覺上分開,
    實測(碩士生)回報七個小圖示擠在一起,沒先讀說明容易搞混哪個按鈕對應流程的哪個階段 */
 '#annoPanel .ap-head .ap-divider{width:1px;align-self:stretch;background:var(--aln);margin:2px 2px;flex:none}',
+/* 手機寬度下標頭按鈕會 flex-wrap 換行,直向的分隔線一換行就卡在行尾/行首,
+   看起來像排版巧合而不是有意義的分組(實測:國二學生在手機上回報工具列擠成兩排,
+   「🤖修改指令」反而像是跟後面的顏色/改字/清空連在一起)。改成每次遇到分隔線就強制
+   另起一行,不管視窗多窄,「修改指令」永遠自成一排,分組意圖不必靠運氣才成立。
+   ⚠️ 這條必須排在上面那條 base rule 之後:同樣 specificity 時 CSS 後宣告的贏,
+   media query 不會自動加分——寫在前面會被後面的 base rule 蓋掉(v4.8 踩過)。 */
+'@media (pointer: coarse){#annoPanel .ap-head .ap-divider{flex-basis:100%;width:auto;height:2px;margin:3px 0;background:none}}',
 '.anno-menu .lm-sub{display:block;font-size:11px;color:var(--amut);font-weight:400;margin-top:2px;line-height:1.4}',
 '#annoLegendCustom{border-top:1px solid var(--aln)!important;border-radius:0 0 7px 7px!important;margin-top:2px;color:var(--amut)}'
 ].join('\n');
@@ -425,6 +432,7 @@ var I18N = {
   only:'只看', open:'未解決', openTitle:'只看還沒解決的',
   svgNoMark:'這段字在圖裡(SVG),沒辦法加標記 —— 可以改標圖旁邊的說明文字',
   aiLegendHint:'💡 目前套用的是「AI 報告審閱」色板(缺來源/事實錯誤等)。如果這份不是 AI 報告,按「🎨 顏色」切換成「一般審閱」(重點/有問題/已確認/補充說明)',
+  authorNameHint:'💡 「你是：」欄位帶出的是這台瀏覽器記住的名字,不一定是你——如果不是你,先改成自己的名字再送出',
   drag:'⠿ 可拖曳', dragTitle:'按住這裡拖曳移動視窗', close:'關閉',
   ph:'輸入註解或回覆…', resolve:'✓ 解決', reopen:'↩ 重新開啟', del:'刪除', send:'送出',
   tog:'標註', resizeTitle:'拖曳調整大小', panel:'標註清單',
@@ -517,6 +525,7 @@ var I18N = {
   only:'Show only ', open:'Open', openTitle:'Show unresolved only',
   svgNoMark:'This text is inside a diagram (SVG) and cannot be highlighted — try the caption next to it',
   aiLegendHint:'💡 The “AI-review” palette is active (unsourced/fact-error, etc). If this isn\'t an AI report, click “🎨 Colors” to switch to “General review” (highlight/issue/verified/note)',
+  authorNameHint:'💡 The “You are:” field is filled from a name this browser remembers — it may not be you. If it isn\'t, change it before sending',
   drag:'⠿ Drag', dragTitle:'Hold here to move this popup', close:'Close',
   ph:'Write a comment or reply…', resolve:'✓ Resolve', reopen:'↩ Reopen', del:'Delete', send:'Send',
   tog:'Notes', resizeTitle:'Drag to resize', panel:'Annotations',
@@ -819,6 +828,12 @@ bar.addEventListener('mousedown', function(e){ e.preventDefault(); });
    不改動 legendMode 本身怎麼決定的邏輯(可能有人就是想要跨文件沿用),只在第一次選字時
    把「現在套用哪一組、怎麼切換」講清楚。 */
 var aiLegendHintShown = false;
+/* 「你是：」欄位帶出的是全域共用的 annoReader::author,不是每份文件各自記憶——
+   實測(可用性複測)多位角色在留言視窗看到一個自己沒打過的陌生名字(這是同一台瀏覽器/
+   同時測試環境留下的舊值),一度愣住以為這台電腦被別人用過。跟 aiLegendHintShown 同一個
+   模式:每次載入頁面只提醒一次,不擋流程,只在有預填值時才提醒(空欄位本來就有 placeholder
+   說明,不需要重複講)。 */
+var authorHintShown = false;
 function showBarForSelection(){
   if(editing){ bar.hidden = true; return; }
   var sel = window.getSelection();
@@ -955,6 +970,7 @@ function openPop(id, rect){
   pop.querySelector('.ap-quote').textContent = '「' + (a.quote.length > 80 ? a.quote.slice(0,80) + '…' : a.quote) + '」';
   var whoIn = pop.querySelector('.ap-whoin');
   whoIn.value = getAuthor();
+  if(!authorHintShown && whoIn.value){ authorHintShown = true; toast(T.authorNameHint); }
   pop.querySelector('.ap-who').classList.toggle('need', !whoIn.value);
   pop.querySelector('.ap-cta').value = drafts[id] || '';
   renderThread(a);
@@ -1745,7 +1761,7 @@ renderAll();
 
 /* ================= 閱讀器本體 ================= */
 (function(){
-var VER = 'v4.7';
+var VER = 'v4.8';
 var RECENTS_KEY = 'annoReader::recents';
 var DOC_PREFIX = 'annoReader::doc::';
 var LANG_KEY = 'annoReader::lang';
