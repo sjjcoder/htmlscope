@@ -153,6 +153,7 @@ var ENGINE_CSS = [
 'mark.anno.flash{outline:2px solid #0e7b6c;outline-offset:1px}',
 '#annoBar,#annoPop,#annoPanel,#annoToggle{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;line-height:1.6;color:var(--atx)}',
 '#annoBar{position:fixed;z-index:2147483000;display:flex;gap:5px;background:var(--as);border:1px solid var(--aln);border-radius:999px;padding:6px 8px;box-shadow:0 4px 16px rgba(0,0,0,.25)}',
+'@media (prefers-reduced-motion: no-preference){#annoBar{transition:opacity .14s ease,transform .14s ease}}',
 '#annoBar button,#annoPop .ap-colors button{display:flex;align-items:center;gap:4px;width:auto;height:auto;min-width:0;min-height:0;border-radius:999px;border:1px solid var(--aln);background:var(--achip);color:var(--atx);cursor:pointer;padding:3px 9px;font-size:12px;white-space:nowrap;line-height:1.6}',
 '#annoBar button:hover,#annoPop .ap-colors button:hover{border-color:var(--aacc);color:var(--aacc)}',
 '.bdot{display:inline-block;width:11px;height:11px;border-radius:50%;flex:none}',
@@ -808,7 +809,17 @@ function showBarForSelection(){
   bar.hidden = false;
   var x = Math.min(Math.max(8, rect.left + rect.width/2 - bar.offsetWidth/2), window.innerWidth - bar.offsetWidth - 8);
   var y = rect.top - 44; if(y < 8) y = rect.bottom + 8;
-  bar.style.left = x + 'px'; bar.style.top = y + 'px'; }
+  bar.style.left = x + 'px'; bar.style.top = y + 'px';
+  /* 淡入當成「有收到你的選取」的訊號:實測手機使用者選字後顏色列偶爾要等一下才跳出來,
+     沒有任何過渡時只會覺得「畫面忽然多了東西」,不確定是不是自己的動作生效了。
+     不用 requestAnimationFrame 排到下一幀才變 1:背景分頁/未合成畫面時 rAF 不保證會觸發,
+     那樣會讓顏色列卡在「已顯示但完全透明」——比原本的延遲還糟(按鈕在但看不到、點不到)。
+     改成強制觸發一次 reflow(讀 offsetHeight)逼瀏覽器先套用「透明起點」,下一行的賦值
+     才會被當成一次「有起點的變化」播放過渡動畫;就算瀏覽器沒有真的播動畫,結果也一定會
+     落在「opacity:1、看得見」,不會卡在看不見的中間態。 */
+  bar.style.opacity = '0'; bar.style.transform = 'translateY(4px) scale(.97)';
+  void bar.offsetHeight;
+  bar.style.opacity = '1'; bar.style.transform = 'translateY(0) scale(1)'; }
 document.addEventListener('mouseup', function(e){
   if(e.target.closest && e.target.closest(UI)) return;
   setTimeout(showBarForSelection, 10); });
@@ -1585,13 +1596,22 @@ document.getElementById('annoDown').addEventListener('click', function(){
   /* 額外說明檔案為何變大 + 下一步怎麼做(實測有人看到 2KB→97KB 以為壞了、也有人不敢傳出去) */
   savedToast(el2.download, out.length, T.sfxAnnoNote); });
 
-/* 觸控裝置(手機/平板)沒有 mouseup:用選取變化(去抖動)來顯示顏色列 */
+/* 觸控裝置(手機/平板)沒有可靠的 mouseup,原本只靠 selectionchange 去抖動(350ms)顯示顏色列。
+   實測(7 角色可用性測試,國二學生用手機)回報:選字後顏色列偶爾沒有立刻跳出來,要再等一下、
+   再碰一次畫面才出現——350ms 的等待,加上完全沒有過渡效果,使用者會以為工具當機了。
+   改成兩個觸發來源並行,不只靠 selectionchange 單一訊號:
+   ① 去抖動縮短到 120ms(仍然過濾長按拖曳選取把手時的中間態,但不再讓人等到心慌)
+   ② 額外監聽 touchend——手指放開的那一刻就檢查一次選取範圍,不必等 debounce 計時器到期,
+     這樣一般的「長按選字→放開」就能立刻反應,只有真的在拖曳調整選取範圍時才會走 debounce。 */
 var coarse = window.matchMedia && matchMedia('(pointer: coarse)').matches;
 var selTimer = null;
 document.addEventListener('selectionchange', function(){
   var s = window.getSelection();
   if(!s.rangeCount || s.isCollapsed){ bar.hidden = true; return; }
-  if(coarse && !editing){ clearTimeout(selTimer); selTimer = setTimeout(showBarForSelection, 350); } });
+  if(coarse && !editing){ clearTimeout(selTimer); selTimer = setTimeout(showBarForSelection, 120); } });
+document.addEventListener('touchend', function(e){
+  if(editing || (e.target.closest && e.target.closest(UI))) return;
+  clearTimeout(selTimer); selTimer = setTimeout(showBarForSelection, 50); });
 window.addEventListener('scroll', function(){
   if(bar.hidden) return;
   var s = window.getSelection();
@@ -1700,7 +1720,7 @@ renderAll();
 
 /* ================= 閱讀器本體 ================= */
 (function(){
-var VER = 'v4.4';
+var VER = 'v4.5';
 var RECENTS_KEY = 'annoReader::recents';
 var DOC_PREFIX = 'annoReader::doc::';
 var LANG_KEY = 'annoReader::lang';
