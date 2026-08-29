@@ -80,6 +80,10 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--ink);fo
 #howto dt{font-weight:700;color:var(--ink);white-space:nowrap}
 #howto dd{margin:0}
 #howto .tip{margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);color:var(--ink)}
+#howto .tip-top{margin:0 0 12px;padding:11px 13px;background:var(--accent-soft);border:1px solid var(--line);border-radius:8px;color:var(--ink);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#howto .tip-top span{flex:1 1 200px}
+#howto .tip-top button{flex:none;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:6px 12px;font-size:12.5px;font-weight:700;cursor:pointer}
+#howto .conv-label{margin:0 0 6px;font-size:11.5px;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em}
 #pasteOv{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px}
 #pasteOv[hidden]{display:none}
 #pasteBox{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.4);width:min(620px,100%);max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
@@ -310,6 +314,12 @@ var ENGINE_CSS = [
 '.anno-menu button:hover{background:var(--achip)}',
 '.anno-menu button.sel{color:var(--aacc);font-weight:700}',
 '.anno-menu button.sel::before{content:"✓ "}',
+/* 匯出選單裡「不用的人可以忽略」的兩項降低視覺權重,讓常用的列印/PDF、一頁標註清單更快被看到 */
+'.anno-menu button.deemph{opacity:.62}',
+'.anno-menu button.deemph:hover{opacity:1}',
+/* 面板標頭的分隔線:把「AI 修改指令/比較版本」這組跟其他一般文件動作在視覺上分開,
+   實測(碩士生)回報七個小圖示擠在一起,沒先讀說明容易搞混哪個按鈕對應流程的哪個階段 */
+'#annoPanel .ap-head .ap-divider{width:1px;align-self:stretch;background:var(--aln);margin:2px 2px;flex:none}',
 '.anno-menu .lm-sub{display:block;font-size:11px;color:var(--amut);font-weight:400;margin-top:2px;line-height:1.4}',
 '#annoLegendCustom{border-top:1px solid var(--aln)!important;border-radius:0 0 7px 7px!important;margin-top:2px;color:var(--amut)}'
 ].join('\n');
@@ -350,7 +360,9 @@ var ENGINE_UI =
 '<button id="annoLang"></button>'+
 '<button id="annoDown"></button>'+
 '<button id="annoExport"></button>'+
+'<span class="ap-divider" aria-hidden="true"></span>'+
 '<button id="annoPrompt"></button>'+
+'<span class="ap-divider" aria-hidden="true"></span>'+
 '<button id="annoLegend"></button>'+
 '<button id="annoEdit"></button>'+
 '<button id="annoClear"></button></div>'+
@@ -391,8 +403,8 @@ var ENGINE_UI =
 '<div class="lm-title"></div>'+
 '<button data-export="print"><span class="lm-name"></span><span class="lm-sub"></span></button>'+
 '<button data-export="report"><span class="lm-name"></span><span class="lm-sub"></span></button>'+
-'<button data-export="md"><span class="lm-name"></span><span class="lm-sub"></span></button>'+
-'<button data-export="json"><span class="lm-name"></span><span class="lm-sub"></span></button>'+
+'<button data-export="md" class="deemph"><span class="lm-name"></span><span class="lm-sub"></span></button>'+
+'<button data-export="json" class="deemph"><span class="lm-name"></span><span class="lm-sub"></span></button>'+
 '</div>'+
 '<div id="annoAiMenu" class="anno-menu" hidden>'+
 '<div class="lm-title"></div>'+
@@ -412,6 +424,7 @@ var I18N = {
   cn:{ y:'黃', r:'紅', g:'綠', b:'藍' },
   only:'只看', open:'未解決', openTitle:'只看還沒解決的',
   svgNoMark:'這段字在圖裡(SVG),沒辦法加標記 —— 可以改標圖旁邊的說明文字',
+  aiLegendHint:'💡 目前套用的是「AI 報告審閱」色板(缺來源/事實錯誤等)。如果這份不是 AI 報告,按「🎨 顏色」切換成「一般審閱」(重點/有問題/已確認/補充說明)',
   drag:'⠿ 可拖曳', dragTitle:'按住這裡拖曳移動視窗', close:'關閉',
   ph:'輸入註解或回覆…', resolve:'✓ 解決', reopen:'↩ 重新開啟', del:'刪除', send:'送出',
   tog:'標註', resizeTitle:'拖曳調整大小', panel:'標註清單',
@@ -422,8 +435,8 @@ var I18N = {
   legendTitle:'選擇或自訂四色螢光筆各代表什麼意思',
   edit:'✏️ 直接改字', editDone:'✔ 完成修改', editTitle:'我自己直接改文件的文字，按下去就立即生效，不用等任何人同意、也不會留下標註 — 適合修錯字。要跟別人討論、或要交給 AI 去改的內容，請改用標記裡的「💡 提議改成…」',
   tipExport:'把標註匯出成報告、清單或資料檔', tipPrompt:'AI 修改相關功能：產生修改指令、或比較這一輪改了什麼',
-  aiMenuTitle:'AI 修改', aiPromptName:'🤖 產生修改指令', aiPromptSub:'把標註整理成指令,貼給 AI 修改文件',
-  aiDiffName:'🔍 比較版本', aiDiffSub:'看跟上次「產生修改指令」比,文件改了哪裡',
+  aiMenuTitle:'AI 修改', aiPromptName:'① 🤖 產生修改指令', aiPromptSub:'把標註整理成指令,貼給 AI 修改文件',
+  aiDiffName:'② 🔍 比較版本', aiDiffSub:'AI 改完貼回來後,看跟上次「產生修改指令」比,文件改了哪裡',
   dvTitle:'版本比對', dvHint:'跟上次的基準版本比較（{d}）— 紅色刪除線是舊文字，綠色底線是新文字',
   dvNoChange:'目前版本跟基準版本一樣,還沒有變化。', dvUpdate:'✓ 更新基準為目前版本',
   sugToggleTitle:'像 Word 的「建議修訂」— 你提出這段該改成什麼，但文件不會馬上被改；對方（或你自己）可以接受或拒絕，也能交給 AI 照著改',
@@ -503,6 +516,7 @@ var I18N = {
   cn:{ y:'Yellow', r:'Red', g:'Green', b:'Blue' },
   only:'Show only ', open:'Open', openTitle:'Show unresolved only',
   svgNoMark:'This text is inside a diagram (SVG) and cannot be highlighted — try the caption next to it',
+  aiLegendHint:'💡 The “AI-review” palette is active (unsourced/fact-error, etc). If this isn\'t an AI report, click “🎨 Colors” to switch to “General review” (highlight/issue/verified/note)',
   drag:'⠿ Drag', dragTitle:'Hold here to move this popup', close:'Close',
   ph:'Write a comment or reply…', resolve:'✓ Resolve', reopen:'↩ Reopen', del:'Delete', send:'Send',
   tog:'Notes', resizeTitle:'Drag to resize', panel:'Annotations',
@@ -516,8 +530,8 @@ var I18N = {
   obBody:'<b>Quick start:</b> select text → pick a color → optionally write a comment — that\'s the core workflow. Everything below is optional, for when you need it: 📤 export, 🤖 revision prompt, ✎ suggest an edit (propose exact replacement text, accept or reject later). ✏️ Edit changes the text directly and takes effect immediately — good for quick typo fixes.',
   obDismiss:'Got it',
   tipExport:'Export your annotations as a report, checklist, or data file', tipPrompt:'AI revision tools: generate a revision prompt, or compare what changed this round',
-  aiMenuTitle:'AI revision', aiPromptName:'🤖 Generate revision prompt', aiPromptSub:'Turn annotations into an instruction for the AI',
-  aiDiffName:'🔍 Compare versions', aiDiffSub:'See what changed since the last "Generate revision prompt"',
+  aiMenuTitle:'AI revision', aiPromptName:'① 🤖 Generate revision prompt', aiPromptSub:'Turn annotations into an instruction for the AI',
+  aiDiffName:'② 🔍 Compare versions', aiDiffSub:'After the AI pastes its revision back, see what changed since the last prompt',
   dvTitle:'Version comparison', dvHint:'Compared with the last baseline ({d}) — strikethrough red is old text, underlined green is new text',
   dvNoChange:'The current version matches the baseline — nothing has changed yet.', dvUpdate:'✓ Update baseline to current version',
   tipClear:'Delete every annotation in this document', tipToggle:'Show or hide the list of all annotations',
@@ -799,6 +813,12 @@ function renderAll(){
 
 var bar = document.getElementById('annoBar');
 bar.addEventListener('mousedown', function(e){ e.preventDefault(); });
+/* 只提醒一次(每次載入頁面):legendMode 是跨文件共用的全域設定,如果使用者之前在別份文件
+   切成「AI 報告審閱」,這份新文件會不知不覺沿用同一組色板 —— 實測(大學生審閱同學的報告,
+   非 AI 產出)回報選字跳出「事實錯誤/幻覺」這類看不懂的標籤,以為自己點錯功能。
+   不改動 legendMode 本身怎麼決定的邏輯(可能有人就是想要跨文件沿用),只在第一次選字時
+   把「現在套用哪一組、怎麼切換」講清楚。 */
+var aiLegendHintShown = false;
 function showBarForSelection(){
   if(editing){ bar.hidden = true; return; }
   var sel = window.getSelection();
@@ -809,6 +829,7 @@ function showBarForSelection(){
   /* 圖(SVG)裡的字沒辦法標:HTML 的 <mark> 放進 SVG 不會渲染,硬標會讓那段字消失。
      直接講清楚,別讓使用者以為是自己選錯了。 */
   if(c.closest('svg')){ bar.hidden = true; toast(T.svgNoMark); return; }
+  if(!aiLegendHintShown && legendMode === 'ai'){ aiLegendHintShown = true; toast(T.aiLegendHint, 6000); }
   var rect = r.getBoundingClientRect();
   bar.hidden = false;
   var x = Math.min(Math.max(8, rect.left + rect.width/2 - bar.offsetWidth/2), window.innerWidth - bar.offsetWidth - 8);
@@ -1724,7 +1745,7 @@ renderAll();
 
 /* ================= 閱讀器本體 ================= */
 (function(){
-var VER = 'v4.6';
+var VER = 'v4.7';
 var RECENTS_KEY = 'annoReader::recents';
 var DOC_PREFIX = 'annoReader::doc::';
 var LANG_KEY = 'annoReader::lang';
@@ -1748,6 +1769,7 @@ var SHELL_I18N = {
   pasteCancel:'取消', pasteGo:'開始標註',
   pasteErrEmpty:'請先貼上一些內容。', pasteFallbackTitle:'未命名文件',
   howtoTitle:'怎麼把手上的檔案變成 HTML?',
+  howtoTipBtn:'✍ 直接貼上文字', howtoConvLabel:'如果真的需要轉檔：',
   howtoWord:'Word', howtoWordD:'另存新檔 → 存檔類型選「網頁 (*.htm, *.html)」',
   howtoGdoc:'Google 文件', howtoGdocD:'檔案 → 下載 → 網頁 (.html,已壓縮),解壓縮後取用裡面的 .html',
   howtoPdf:'PDF', howtoPdfD:'用 Word 開啟 PDF 再另存為網頁;或直接把內文複製起來用上面的「✍ 直接貼上文字」',
@@ -1815,6 +1837,7 @@ var SHELL_I18N = {
   pasteCancel:'Cancel', pasteGo:'Start annotating',
   pasteErrEmpty:'Paste some content first.', pasteFallbackTitle:'Untitled document',
   howtoTitle:'How do I turn my file into HTML?',
+  howtoTipBtn:'✍ Paste text instead', howtoConvLabel:'If you do need to convert:',
   howtoWord:'Word', howtoWordD:'Save As → choose “Web Page (*.htm, *.html)”',
   howtoGdoc:'Google Docs', howtoGdocD:'File → Download → Web Page (.html, zipped), then unzip and use the .html inside',
   howtoPdf:'PDF', howtoPdfD:'Open the PDF in Word and save as a web page — or just copy the text and use “✍ Paste text instead” above',
@@ -1888,14 +1911,23 @@ function applyShellLang(){
   /* 「我沒有 HTML 檔」入口與轉檔說明 */
   document.getElementById('btnPaste').textContent = ST.btnPaste;
   document.getElementById('btnHowto').textContent = ST.btnHowto;
+  /* 提示放最上面、附一顆真的能點的按鈕,四種轉檔步驟往後放,只給真的需要轉檔的人參考。
+     實測(行政上班族、碩士生)回報:原本轉檔步驟在前,「不用管轉檔,直接貼上文字」這句
+     最有用的提示要捲到最底部才看得到,行政上班族看了轉檔步驟直接皺眉「我平常真的沒試過」,
+     碩士生形容這是「繞了一圈才指回同一顆按鈕」。 */
   document.getElementById('howto').innerHTML =
-    '<h4>' + ST.howtoTitle + '</h4><dl>' +
+    '<h4>' + ST.howtoTitle + '</h4>' +
+    '<div class="tip-top"><span>💡 ' + ST.howtoTip + '</span><button id="howtoTipBtn" type="button">' + ST.howtoTipBtn + '</button></div>' +
+    '<p class="conv-label">' + ST.howtoConvLabel + '</p>' +
+    '<dl>' +
     '<dt>' + ST.howtoWord + '</dt><dd>' + ST.howtoWordD + '</dd>' +
     '<dt>' + ST.howtoGdoc + '</dt><dd>' + ST.howtoGdocD + '</dd>' +
     '<dt>' + ST.howtoPdf + '</dt><dd>' + ST.howtoPdfD + '</dd>' +
     '<dt>' + ST.howtoAi + '</dt><dd>' + ST.howtoAiD + '</dd>' +
     '<dt>' + ST.howtoWeb + '</dt><dd>' + ST.howtoWebD + '</dd>' +
-    '</dl><div class="tip">💡 ' + ST.howtoTip + '</div>';
+    '</dl>';
+  document.getElementById('howtoTipBtn').addEventListener('click', function(){
+    document.getElementById('howto').hidden = true; openPaste(); });
   var pv = document.getElementById('pasteOv');
   pv.querySelector('.ptitle').textContent = ST.pasteTitle;
   pv.querySelector('.pdesc').textContent = ST.pasteDesc;
@@ -2154,6 +2186,13 @@ document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && !past
 document.getElementById('btnHowto').addEventListener('click', function(){
   var h = document.getElementById('howto'); h.hidden = !h.hidden;
   if(!h.hidden) h.scrollIntoView({ block:'nearest' }); });
+/* 產品頁的「沒有 HTML 檔?直接貼上文字」連結指到這裡(htmlscope.html#paste),讓它真的
+   直接開貼字視窗 —— 實測(大學生)回報:點下去以為會跳出貼字框,結果落地頁只是捲動到
+   說明文字,沒有真的能貼字的欄位,連結字面意思跟行為不符。 */
+if(location.hash === '#paste'){
+  openPaste();
+  try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
+}
 /* 貼上的內容轉成可標註的文件:看起來像 HTML 就當 HTML,否則把純文字包成段落 */
 function htmlFromPaste(title, raw){
   var esc = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
