@@ -24,7 +24,11 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--ink);fo
 #drop:hover,#drop.over{border-color:var(--accent);color:var(--accent)}
 #drop .big{font-size:17px;font-weight:700;margin-bottom:6px}
 #recents{margin-top:26px}
-#recents h3{font-size:14px;margin:0 0 8px;color:var(--ink2)}
+#recents .rec-head{display:flex;align-items:center;gap:10px;margin:0 0 8px}
+#recents h3{font-size:14px;margin:0;color:var(--ink2);flex:1}
+#recents .clearall{background:none;border:1px solid var(--line);border-radius:7px;color:var(--ink2);cursor:pointer;font-size:12px;padding:4px 9px}
+#recents .clearall:hover{border-color:var(--danger);color:var(--danger)}
+#recents .rec-hint{color:var(--ink2);font-size:12px;line-height:1.6;margin:0 0 12px}
 .rec{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:10px 14px;margin-bottom:8px;cursor:pointer}
 .rec:hover{border-color:var(--accent)}
 .rec .nm{font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1720,7 +1724,7 @@ renderAll();
 
 /* ================= 閱讀器本體 ================= */
 (function(){
-var VER = 'v4.5';
+var VER = 'v4.6';
 var RECENTS_KEY = 'annoReader::recents';
 var DOC_PREFIX = 'annoReader::doc::';
 var LANG_KEY = 'annoReader::lang';
@@ -1751,6 +1755,9 @@ var SHELL_I18N = {
   howtoWeb:'網頁', howtoWebD:'在瀏覽器按 Ctrl+S,存檔類型選「網頁,單一檔案」',
   howtoTip:'最快的方式:不用管轉檔,直接用「✍ 直接貼上文字」把內容貼進來就能開始。',
   recents:'最近開啟', tooBig:'（檔案過大未快取，請重新開檔）',
+  recentsHint:'這份紀錄只存在這台瀏覽器裡，不會同步給任何人。如果是公用電腦、看到別人留下的檔名，按右邊「清除全部」就能清乾淨。',
+  clearAll:'🗑 清除全部', clearAllTitle:'清除這台瀏覽器裡所有的「最近開啟」與標註資料',
+  confirmClearAll:'清除全部 {n} 份「最近開啟」紀錄？裡面的標註資料也會一併刪除，且無法復原。',
   delTitle:'從列表移除（標註資料一併刪除）',
   confirmRemove:'移除「{name}」？其標註資料（{n} 筆）也會刪除。',
   reopenAlert:'這份文件當時太大沒有快取，請重新選擇檔案開啟。',
@@ -1815,6 +1822,9 @@ var SHELL_I18N = {
   howtoWeb:'A web page', howtoWebD:'Press Ctrl+S in your browser and choose “Web Page, Single File”',
   howtoTip:'Fastest route: skip conversion entirely — use “✍ Paste text instead” and paste your content straight in.',
   recents:'Recently opened', tooBig:'(too large to cache — please re-open the file)',
+  recentsHint:'This list only lives in this browser — it is never synced to anyone else. On a shared computer, if you see filenames someone else left behind, use “Clear all” to wipe it.',
+  clearAll:'🗑 Clear all', clearAllTitle:'Clear every “recently opened” entry and its annotations from this browser',
+  confirmClearAll:'Clear all {n} “recently opened” entries? Their annotations will also be deleted, and this cannot be undone.',
   delTitle:'Remove from list (its annotations are deleted too)',
   confirmRemove:'Remove “{name}”? Its annotations ({n}) will also be deleted.',
   reopenAlert:'This document was too large to cache — please choose the file again.',
@@ -2040,12 +2050,32 @@ function saveRecent(name, key, html){
   renderRecents();
 }
 
+function clearAllRecents(){
+  var r = getRecents();
+  if(!r.length) return;
+  if(!confirm(SF(ST.confirmClearAll, { n: r.length }))) return;
+  r.forEach(function(item){
+    try{ localStorage.removeItem(DOC_PREFIX + item.key); localStorage.removeItem(item.key); }catch(e){} });
+  setRecents([]);
+  renderRecents();
+}
 function renderRecents(){
   var box = document.getElementById('recents');
   var r = getRecents();
   box.innerHTML = '';
   if(!r.length) return;
-  var h = document.createElement('h3'); h.textContent = ST.recents; box.appendChild(h);
+  /* 標題與「清除全部」放同一列;下面補一行說明這份清單只存在這台瀏覽器裡 —— 有使用者
+     (實測:上班族、工程師、企業主)在公用電腦或多分頁情境下看到陌生檔名,一度以為資料外洩
+     或跟別人的混在一起,說明文字+一鍵清除入口讓人有辦法自己處理,不必乾等或不敢再點。 */
+  var head = document.createElement('div'); head.className = 'rec-head';
+  var h = document.createElement('h3'); h.textContent = ST.recents; head.appendChild(h);
+  var clearBtn = document.createElement('button'); clearBtn.className = 'clearall';
+  clearBtn.textContent = ST.clearAll; clearBtn.title = ST.clearAllTitle;
+  clearBtn.addEventListener('click', clearAllRecents);
+  head.appendChild(clearBtn);
+  box.appendChild(head);
+  var hint = document.createElement('p'); hint.className = 'rec-hint'; hint.textContent = ST.recentsHint;
+  box.appendChild(hint);
   r.forEach(function(item){
     var d = document.createElement('div'); d.className = 'rec';
     var nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = item.name; d.appendChild(nm);
