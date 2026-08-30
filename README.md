@@ -58,6 +58,9 @@
 - **`legendMode`（顏色預設：一般審閱／AI 報告審閱／自訂）是跨文件共用的全域設定，不是每份文件各自獨立**（`localStorage` key `annoReader::legendPreset`）——切到 AI 審閱模式後，下一份完全無關的新文件也會沿用同一組色板（實測使用者拿來審閱同學報告時因此看到「事實錯誤／幻覺」這類看不懂的標籤）。目前刻意保留這個行為（跨文件沿用對持續審閱 AI 報告的人是合理預期），只在每次載入頁面第一次選字、且目前是 AI 模式時跳一次提示條說明可以怎麼切換（`aiLegendHintShown`）；**如果之後要改成每份文件各自獨立記憶，得另外存一把以文件為 key 的覆寫值，且要決定它跟 `presetLegend`（文件內嵌的圖例）之間的優先順序**
 - **`annoReader::author`（留言署名）跟 `annoReader::recents`／`annoReader::legendPreset` 一樣，是跨文件、跨分頁共用的全域 localStorage**——不是每份文件各自記憶。開留言視窗時會自動帶入上次用過的名字，如果同一台瀏覽器換人用（公用電腦、或這次可用性複測裡 7 個角色併發共用同一個 origin），會看到別人留下的名字，容易誤植送出。跟「最近開啟」清單同一套處理邏輯：不擋流程，只在每次載入頁面第一次開留言視窗、且欄位帶出非空值時提醒一次（`authorHintShown`）
 - **CSS 的 `@media` 覆寫規則，必須寫在 base rule 之後才會生效**——同樣 specificity 時 CSS cascade 是「後宣告的贏」，media query 條件成立不會讓規則自動加分。v4.8 曾把手機版的 `.ap-divider` 覆寫（`flex-basis:100%`）寫在桌面版 base rule（`flex:none`）**前面**，結果即使 `@media (pointer:coarse)` 確實 match，規則也完全沒套用，因為後出現的 base rule 贏了。**新增任何 `@media` 覆寫，先確認它在原始碼順序上排在被覆寫的那條規則之後**
+- **`window.prompt()`／`alert()`／`confirm()` 不可靠，介面上不要用**——已知在部分環境（sandbox、file://、部分企業瀏覽器政策）會被整個擋掉、直接回傳 `null`，使用者點下去毫無反應也沒有任何錯誤訊息，會被誤以為按鈕壞了。署名欄（`annoReader::author`）早期就踩過這個坑並改成面板內建輸入框；**但「自訂四色名稱」當時漏改，一直用 `prompt()` 到 v4.9 才補上**（同一顆坑踩了兩次，只是分兩個功能）。任何新增的「跟使用者要一段文字」的互動，一律用內嵌輸入框（沿用 `.anno-modal-ov`/`.anno-modal-bx` 這類既有樣式），不要叫原生對話框
+- **新增浮動/彈出元件時，除了調色盤變數清單（見上）之外，還要檢查 `@media print` 的隱藏清單**——`window.print()` 只套用 CSS 的 `print` media，跟元件當下是否 `hidden` 無關；v4.9 之前 `#annoToast` 沒被列進 `@media print{...display:none!important}`，使用者按「列印/存 PDF」時看到的「已打開列印視窗…」提示泡泡會直接被印進 PDF、蓋住底下的文字。這份隱藏清單應該跟 `UI` 變數（ENGINE 內）保持同一份成員，兩邊分別維護容易漏
+- **`index.html` 的 `header` 是 `position:sticky`（62px 高）——任何錨點連結（導覽列、頁尾連結）的目標元素都要設 `scroll-margin-top:80px`**，否則瀏覽器原生錨點跳轉只會把目標頂端對到視窗最頂端，完全不知道上面蓋著一條固定頁首，目標前 60~80px 永遠被蓋住，使用者會覺得「跳到奇怪的位置」。新增任何 `id="..."` 錨點目標記得回頭加進這條規則的選擇器清單
 
 ## 已知雷
 

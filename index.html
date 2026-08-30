@@ -81,6 +81,10 @@ header{
 .brand{font-family:var(--mono);font-weight:700;font-size:16px;letter-spacing:-.01em;display:flex;align-items:center;gap:8px;white-space:nowrap}
 .brand .sq{width:16px;height:16px;border-radius:3px;background:var(--accent);position:relative;flex:none}
 .brand .sq::after{content:"";position:absolute;left:3px;right:3px;bottom:3px;height:5px;border-radius:1px;background:var(--hl-y)}
+/* header 是 position:sticky 蓋在最上面(62px 高)——沒有這行的話,錨點連結會把目標元素的頂端
+   對齊到視窗最頂端,結果前面 60~80px 被固定 header 蓋住,看起來像跳到「奇怪的位置」。
+   #fork/#how/#nofile/#ai-loop/#privacy/#get 是導覽列的錨點,#license 是頁尾授權說明連結的目標。 */
+#fork,#how,#nofile,#ai-loop,#privacy,#get,#license{scroll-margin-top:80px}
 .nav .spring{margin-left:auto}
 .nav a.navlink{font-size:14px;color:var(--ink-2);text-decoration:none;display:none}
 .nav a.navlink:hover{color:var(--ink)}

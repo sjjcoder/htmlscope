@@ -145,8 +145,8 @@ body.reading #view{display:block}
 /* ================= 標註引擎（會被注入到文件 iframe / 傳閱版檔案裡） ================= */
 var ENGINE_CSS = [
 /* 深淺色自動切換:UI 全部走這組變數 */
-'#annoBar,#annoPop,#annoPanel,#annoToggle,#annoStaticApp,#annoPromptOverlay,#annoDiffOverlay,#annoToast,.anno-menu{--as:#fff;--atx:#222;--amut:#888;--aln:#ccc;--achip:#f0f0f0;--amsg:#f4f4f4;--aacc:#0e7b6c;--adelb:#fdeceb;--adelt:#b4372e}',
-'@media (prefers-color-scheme: dark){#annoBar,#annoPop,#annoPanel,#annoToggle,#annoStaticApp,#annoPromptOverlay,#annoDiffOverlay,#annoToast,.anno-menu{--as:#23282a;--atx:#e6eae8;--amut:#9aa8a4;--aln:#454c4e;--achip:#2e3436;--amsg:#2b3133;--aacc:#3bb89f;--adelb:#3a201d;--adelt:#e07a70}}',
+'#annoBar,#annoPop,#annoPanel,#annoToggle,#annoStaticApp,#annoPromptOverlay,#annoDiffOverlay,#annoLegendEditOverlay,#annoToast,.anno-menu{--as:#fff;--atx:#222;--amut:#888;--aln:#ccc;--achip:#f0f0f0;--amsg:#f4f4f4;--aacc:#0e7b6c;--adelb:#fdeceb;--adelt:#b4372e}',
+'@media (prefers-color-scheme: dark){#annoBar,#annoPop,#annoPanel,#annoToggle,#annoStaticApp,#annoPromptOverlay,#annoDiffOverlay,#annoLegendEditOverlay,#annoToast,.anno-menu{--as:#23282a;--atx:#e6eae8;--amut:#9aa8a4;--aln:#454c4e;--achip:#2e3436;--amsg:#2b3133;--aacc:#3bb89f;--adelb:#3a201d;--adelt:#e07a70}}',
 '#annoBar[hidden],#annoPanel[hidden],#annoPop[hidden]{display:none!important}',
 'mark.anno{background:transparent;color:inherit;cursor:pointer;border-radius:2px;padding:0 1px}',
 'mark.anno:hover{filter:brightness(.9)}',
@@ -277,7 +277,9 @@ var ENGINE_CSS = [
    ③ 深色文件的災難:瀏覽器不印背景卻照印文字色,深色主題一到紙上就變成白紙上的淺灰字
       (實測某份深色報告對比只有 1.21:1,整份形同空白)。beforeprint 會偵測底色,
       深色才掛上 anno-print-light,淺色文件完全不動。 */
-'@media print{#annoBar,#annoPop,#annoPanel,#annoToggle{display:none!important}#annoPrintApp{display:block;page-break-before:always}}',
+/* 這條要跟 UI 變數(見 ENGINE 內)保持同一份清單——漏列的浮動元件列印/存 PDF 時會蓋住內文,
+   annoToast 就是這樣被漏掉過一次:列印用的提示 toast 蓋住 PDF 文字。 */
+'@media print{#annoBar,#annoPop,#annoPanel,#annoToggle,#annoPromptOverlay,#annoDiffOverlay,#annoLegendMenu,#annoExportMenu,#annoAiMenu,#annoLegendEditOverlay,#annoToast{display:none!important}#annoPrintApp{display:block;page-break-before:always}}',
 '@media print{mark.anno{-webkit-print-color-adjust:exact;print-color-adjust:exact;border-bottom:1.5px solid rgba(0,0,0,.45)}}',
 '@media print{html.anno-print-light,html.anno-print-light body{background:#fff!important}',
 'html.anno-print-light body *{background-color:transparent!important;color:#111!important;border-color:#999!important}',
@@ -300,6 +302,12 @@ var ENGINE_CSS = [
 '.anno-modal-bx .pm-foot button{font-size:13px;border-radius:7px;padding:8px 15px;cursor:pointer;border:1px solid var(--aln);background:var(--achip);color:var(--atx)}',
 '.anno-modal-bx .pm-foot button:hover{border-color:var(--aacc)}',
 '.anno-modal-bx .pm-foot button.pm-copy{background:var(--aacc);color:#fff;border-color:var(--aacc)}',
+'#annoLegendEditBox{width:min(360px,92vw)}',
+'.pm-lgrid{padding:12px 16px;display:flex;flex-direction:column;gap:10px}',
+'.pm-lrow{display:flex;align-items:center;gap:10px}',
+'.pm-lrow .pm-lic{font-size:15px;flex:none;width:20px;text-align:center}',
+'.pm-linput{flex:1;min-width:0;background:var(--achip);color:var(--atx);border:1px solid var(--aln);border-radius:6px;padding:7px 9px;font:inherit;font-size:13px}',
+'.pm-linput:focus{border-color:var(--aacc);outline:none}',
 '.dv-stats{padding:8px 16px 0;font-size:12px;color:var(--amut)}',
 '.dv-stats .dv-add{color:#3cb878;font-weight:700}',
 '.dv-stats .dv-rem{color:#e4574a;font-weight:700}',
@@ -406,6 +414,17 @@ var ENGINE_UI =
 '<button data-preset="ai"><span class="lm-name"></span><span class="lm-sub"></span></button>'+
 '<button id="annoLegendCustom"></button>'+
 '</div>'+
+'<div id="annoLegendEditOverlay" class="anno-modal-ov" hidden><div id="annoLegendEditBox" class="anno-modal-bx">'+
+'<div class="pm-head"><b class="pm-title"></b><button class="pm-x">✕</button></div>'+
+'<div class="pm-hint"></div>'+
+'<div class="pm-lgrid">'+
+'<div class="pm-lrow"><span class="pm-lic">🟡</span><input class="pm-linput" data-c="y" type="text" maxlength="12"></div>'+
+'<div class="pm-lrow"><span class="pm-lic">🔴</span><input class="pm-linput" data-c="r" type="text" maxlength="12"></div>'+
+'<div class="pm-lrow"><span class="pm-lic">🟢</span><input class="pm-linput" data-c="g" type="text" maxlength="12"></div>'+
+'<div class="pm-lrow"><span class="pm-lic">🔵</span><input class="pm-linput" data-c="b" type="text" maxlength="12"></div>'+
+'</div>'+
+'<div class="pm-foot"><span class="sp"></span><button class="pm-lcancel"></button><button class="pm-lsave pm-copy"></button></div>'+
+'</div></div>'+
 '<div id="annoExportMenu" class="anno-menu" hidden>'+
 '<div class="lm-title"></div>'+
 '<button data-export="print"><span class="lm-name"></span><span class="lm-sub"></span></button>'+
@@ -422,7 +441,7 @@ var ENGINE_UI =
 function ENGINE(){
 var KEY = window.__ANNO_KEY || 'anno::standalone::' + (document.title || 'doc');
 var NAME = window.__ANNO_NAME || document.title || 'document';
-var UI = '#annoBar,#annoPop,#annoPanel,#annoToggle,#annoPromptOverlay,#annoDiffOverlay,#annoLegendMenu,#annoExportMenu,#annoAiMenu,#annoToast';
+var UI = '#annoBar,#annoPop,#annoPanel,#annoToggle,#annoPromptOverlay,#annoDiffOverlay,#annoLegendMenu,#annoExportMenu,#annoAiMenu,#annoLegendEditOverlay,#annoToast';
 /* ---- 雙語字典:跟著 ENGINE.toString() 進傳閱版,收件人依自己的偏好/瀏覽器語言顯示 ---- */
 var I18N = {
  zh: {
@@ -489,7 +508,8 @@ var I18N = {
   openCount:'{t} · {o} 未解決',
   more:'（共 {n} 則）',
   confirmClear:'確定刪除全部 {n} 筆標註？',
-  legendPrompt:'自訂四色的意義（格式:黃=重點, 紅=有問題, 綠=已確認, 藍=補充說明）',
+  lgeTitle:'自訂四色名稱', lgeHint:'改完按「儲存」才會套用。已存在的標註不會被改變分類,只有之後新標的才用新名稱。',
+  lgeCancel:'取消', lgeSave:'儲存',
   printTitle:'📝 標註註解', resolvedParen:'（已解決）',
   staticTitle:'📝 標註對照表',
   staticHint:'共 {n} 筆標註。此表為靜態預覽（手機/預覽視窗適用）；要回覆或新增標記，請用瀏覽器（Chrome/Edge/Safari）開啟本檔。',
@@ -582,7 +602,8 @@ var I18N = {
   openCount:'{t} · {o} open',
   more:' ({n} messages)',
   confirmClear:'Delete all {n} annotations?',
-  legendPrompt:'Customize the four colors (format: y=Key point, r=Issue, g=Confirmed, b=Note)',
+  lgeTitle:'Customize color labels', lgeHint:'Changes apply after you press Save. Existing annotations keep the category they were created with — only new ones use the new labels.',
+  lgeCancel:'Cancel', lgeSave:'Save',
   printTitle:'📝 Annotations', resolvedParen:' (resolved)',
   staticTitle:'📝 Annotation table',
   staticHint:'{n} annotations total. This is a static preview (for phones / preview windows); to reply or add annotations, open this file in a browser (Chrome/Edge/Safari).',
@@ -1161,18 +1182,27 @@ legendMenu.querySelectorAll('[data-preset]').forEach(function(b){ b.addEventList
   applyLegendMode(); legendMenu.hidden = true;
   /* 明確告知既有標註不會被改語意(切換後新標的才用新意義),避免使用者以為自己的標註被偷改 */
   if(annos.length) toast(F(T.legendSwitched, { n: annos.length })); }); });
+/* 自訂圖例名稱:改用面板內建的四格輸入,不用瀏覽器 prompt()——
+   跟署名欄同一個教訓(見上面的註解),prompt() 在部分環境會被擋掉且直接回傳 null,
+   點了完全沒反應,使用者會以為這個按鈕壞了。 */
+var legendEditOverlay = document.getElementById('annoLegendEditOverlay');
 document.getElementById('annoLegendCustom').addEventListener('click', function(){
   legendMenu.hidden = true;
-  var kn = (L === 'zh') ? { y:'黃', r:'紅', g:'綠', b:'藍' } : { y:'y', r:'r', g:'g', b:'b' };
-  var cur = ['y','r','g','b'].map(function(c){ return kn[c] + '=' + LEGEND[c]; }).join(', ');
-  var n = prompt(T.legendPrompt, cur);
-  if(n === null) return;
-  var map = { '黃':'y', '紅':'r', '綠':'g', '藍':'b', 'y':'y', 'r':'r', 'g':'g', 'b':'b', 'yellow':'y', 'red':'r', 'green':'g', 'blue':'b' };
+  legendEditOverlay.querySelectorAll('.pm-linput').forEach(function(inp){ inp.value = LEGEND[inp.getAttribute('data-c')]; });
+  legendEditOverlay.hidden = false;
+  var first = legendEditOverlay.querySelector('.pm-linput'); if(first) first.focus(); });
+function closeLegendEdit(){ legendEditOverlay.hidden = true; }
+legendEditOverlay.querySelector('.pm-x').addEventListener('click', closeLegendEdit);
+legendEditOverlay.querySelector('.pm-lcancel').addEventListener('click', closeLegendEdit);
+legendEditOverlay.addEventListener('click', function(e){ if(e.target === legendEditOverlay) closeLegendEdit(); });
+legendEditOverlay.querySelector('.pm-lsave').addEventListener('click', function(){
   var next = copyLeg(LEGEND);
-  n.split(/[,，]/).forEach(function(seg){ var kv = seg.split('='); if(kv.length === 2){ var k = map[kv[0].trim().toLowerCase()] || map[kv[0].trim()]; if(k && kv[1].trim()) next[k] = kv[1].trim(); } });
+  legendEditOverlay.querySelectorAll('.pm-linput').forEach(function(inp){
+    var v = inp.value.trim(); if(v) next[inp.getAttribute('data-c')] = v; });
   customLegend = next; legendMode = 'custom';
   try{ localStorage.setItem('annoReader::legendPreset', 'custom'); localStorage.setItem('annoReader::legend', JSON.stringify(next)); }catch(e){}
-  applyLegendMode(); });
+  applyLegendMode();
+  closeLegendEdit(); });
 document.addEventListener('click', function(e){ if(!legendMenu.hidden && e.target.closest && !e.target.closest('#annoLegendMenu,#annoLegend')) legendMenu.hidden = true; });
 
 /* ---- 語言:所有介面文字集中在這裡填,切換時整組重刷 ---- */
@@ -1234,6 +1264,12 @@ function applyI18n(){
   gB.querySelector('.lm-name').textContent = T.presetGeneral; gB.querySelector('.lm-sub').textContent = legSub(T.legend);
   aB.querySelector('.lm-name').textContent = T.presetAI; aB.querySelector('.lm-sub').textContent = legSub(T.aiLegend);
   document.getElementById('annoLegendCustom').textContent = T.presetCustom;
+  var lge = document.getElementById('annoLegendEditOverlay');
+  lge.querySelector('.pm-title').textContent = T.lgeTitle;
+  lge.querySelector('.pm-hint').textContent = T.lgeHint;
+  lge.querySelector('.pm-x').title = T.close;
+  lge.querySelector('.pm-lcancel').textContent = T.lgeCancel;
+  lge.querySelector('.pm-lsave').textContent = T.lgeSave;
   applyLegend(); }
 function setLang(l, fromShell){
   if(l !== 'zh' && l !== 'en') return;
@@ -1580,7 +1616,7 @@ if(!loadBaseline()) saveBaseline();
 function buildStandalone(){
   renderAll(); /* 標記保留在輸出裡 */
   var clone = document.documentElement.cloneNode(true);
-  ['annoBar','annoPop','annoPanel','annoPromptOverlay','annoDiffOverlay','annoLegendMenu','annoExportMenu','annoAiMenu','annoToast'].forEach(function(id){
+  ['annoBar','annoPop','annoPanel','annoPromptOverlay','annoDiffOverlay','annoLegendMenu','annoExportMenu','annoAiMenu','annoLegendEditOverlay','annoToast'].forEach(function(id){
     var el = clone.querySelector('#' + id); if(el) el.setAttribute('hidden',''); });
   var pa = clone.querySelector('#annoPrintApp'); if(pa) pa.remove();
   clone.querySelectorAll('.annoPrintNo,#annoStaticApp').forEach(function(el){ el.remove(); });
@@ -1670,6 +1706,7 @@ document.addEventListener('keydown', function(e){
     if(!legendMenu.hidden || !exportMenu.hidden || !aiMenu.hidden){ legendMenu.hidden = true; exportMenu.hidden = true; aiMenu.hidden = true; return; }
     if(!promptOverlay.hidden){ promptOverlay.hidden = true; return; }
     if(!diffOverlay.hidden){ diffOverlay.hidden = true; return; }
+    if(!legendEditOverlay.hidden){ legendEditOverlay.hidden = true; return; }
     if(!pop.hidden){ closePop(); return; }
     panel.hidden = true; } });
 
@@ -1761,7 +1798,7 @@ renderAll();
 
 /* ================= 閱讀器本體 ================= */
 (function(){
-var VER = 'v4.8';
+var VER = 'v4.9';
 var RECENTS_KEY = 'annoReader::recents';
 var DOC_PREFIX = 'annoReader::doc::';
 var LANG_KEY = 'annoReader::lang';
@@ -2036,7 +2073,7 @@ function cleanDocument(html){
     if(!/#anno[A-Z]|mark\.anno|\.ap-|\.fchip|\.dv-stats|\.pm-head/.test(st.textContent)) return;
     var t = stripAnnoRules(st.textContent);
     if(t.trim()) st.textContent = t; else st.remove(); });
-  ['annoBar','annoPop','annoPanel','annoToggle','annoFile','annoResize','annoPrintApp','annoStaticApp','annoPromptOverlay','annoDiffOverlay','annoLegendMenu','annoExportMenu','annoAiMenu','annoToast'].forEach(function(id){
+  ['annoBar','annoPop','annoPanel','annoToggle','annoFile','annoResize','annoPrintApp','annoStaticApp','annoPromptOverlay','annoDiffOverlay','annoLegendMenu','annoExportMenu','annoAiMenu','annoLegendEditOverlay','annoToast'].forEach(function(id){
     var el = doc.getElementById(id); if(el) el.remove(); });
   doc.querySelectorAll('.annoPrintNo').forEach(function(el){ el.remove(); });
   doc.querySelectorAll('*').forEach(function(el){
