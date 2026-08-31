@@ -371,7 +371,6 @@ var ENGINE_UI =
 '<div id="annoPanel" hidden>'+
 '<div id="annoResize"></div>'+
 '<div class="ap-head"><span id="annoPanTitle"></span><span class="sp"></span>'+
-'<button id="annoAuthor"></button>'+
 '<button id="annoLang"></button>'+
 '<button id="annoDown"></button>'+
 '<button id="annoExport"></button>'+
@@ -455,8 +454,7 @@ var I18N = {
   drag:'⠿ 可拖曳', dragTitle:'按住這裡拖曳移動視窗', close:'關閉',
   ph:'輸入註解或回覆…', resolve:'✓ 解決', reopen:'↩ 重新開啟', del:'刪除', send:'送出',
   tog:'標註', resizeTitle:'拖曳調整大小', panel:'標註清單',
-  authorBtn:'👤 名稱', langBtn:'🌐 EN', legendBtn:'🎨 顏色',
-  authorTitle:'設定你的顯示名稱(會出現在你的留言旁邊)',
+  langBtn:'🌐 EN', legendBtn:'🎨 顏色',
   down:'⬇ 傳閱版', downTitle:'把文件和你的所有標記打包成一個檔,對方直接打開就能看、能回覆',
   report:'📄 報告', reportTitle:'產出一頁式標註摘要,適合貼進會議紀錄',
   legendTitle:'選擇或自訂四色螢光筆各代表什麼意思',
@@ -486,7 +484,6 @@ var I18N = {
   approxMark:'≈ ', approxHint:'位置為近似 — 原文已被修改,系統依前後文與相似度重新定位,請確認標的是否正確',
   whoLab:'你是', whoPh:'填你的名字(會顯示在留言上)',
   needName:'請先在上面填你的名字,留言才看得出是誰寫的。',
-  nameNoAnno:'先在文件上標一段文字,就能在留言視窗填你的名字。',
   savedToast:'✓ 已存到「下載」資料夾:{f}({s})',
   sugToggle:'💡 提議改成…（不會馬上生效，要對方同意）', sugSave:'儲存提議', sugCancel:'取消', sugAccept:'✓ 接受(套用)', sugRemove:'移除提議',
   sugFulfilledLab:'✓ 已經照你的提議改好了：',
@@ -549,8 +546,7 @@ var I18N = {
   drag:'⠿ Drag', dragTitle:'Hold here to move this popup', close:'Close',
   ph:'Write a comment or reply…', resolve:'✓ Resolve', reopen:'↩ Reopen', del:'Delete', send:'Send',
   tog:'Notes', resizeTitle:'Drag to resize', panel:'Annotations',
-  authorBtn:'👤 Name', langBtn:'🌐 中文', legendBtn:'🎨 Colors',
-  authorTitle:'Set your display name (shown next to your comments)',
+  langBtn:'🌐 中文', legendBtn:'🎨 Colors',
   down:'⬇ Annotated copy', downTitle:'Package the document with all your marks into one file — the recipient just opens it to read and reply',
   report:'📄 Report', reportTitle:'Export a one-page summary, ready to paste into meeting notes',
   legendTitle:'Choose or customize what the four highlight colors mean',
@@ -580,7 +576,6 @@ var I18N = {
   approxMark:'≈ ', approxHint:'Approximate location — the original text was edited; re-anchored by context and similarity. Please verify the target.',
   whoLab:'You are', whoPh:'your name (shown on your comments)',
   needName:'Enter your name above first, so people can tell who wrote this.',
-  nameNoAnno:'Highlight some text in the document first — then you can set your name in the comment popup.',
   savedToast:'✓ Saved to your Downloads folder: {f} ({s})',
   sugToggle:'💡 Suggest a change… (needs approval — nothing changes yet)', sugSave:'Save suggestion', sugCancel:'Cancel', sugAccept:'✓ Accept (apply)', sugRemove:'Remove suggestion',
   sugFulfilledLab:'✓ Already changed as you suggested:',
@@ -1139,16 +1134,6 @@ document.getElementById('annoClear').addEventListener('click', function(){
   if(annos.length && confirm(F(T.confirmClear, { n: annos.length }))){
     addTombs(annos.map(function(a){ return a.id; }));
     annos = []; renderAll(); } });
-/* 👤 名稱:改為就地編輯 —— 有標註時開最近一則的留言視窗並聚焦署名欄;沒有標註時直接用 toast 說明何時可設定。
-   舊版用 prompt() 在部分環境不會出現,使用者回報「按了完全沒反應」。 */
-document.getElementById('annoAuthor').addEventListener('click', function(e){
-  /* 擋掉冒泡:否則全域「點 #annoPop 以外就關閉」的處理器會立刻把剛開的視窗關掉 */
-  e.stopPropagation();
-  var target = annos.filter(function(a){ return !a.orphan; })[0];
-  if(!target){ toast(T.nameNoAnno); return; }
-  var m = document.querySelector('mark.anno[data-id="' + target.id + '"]');
-  openPop(target.id, m ? m.getBoundingClientRect() : { left: 40, top: 80, bottom: 100 });
-  var whoIn = pop.querySelector('.ap-whoin'); whoIn.focus(); whoIn.select(); });
 /* 顏色意義:套到所有提示文字;🎨 可自訂 */
 function applyLegend(){
   ['y','r','g','b'].forEach(function(c){
@@ -1227,7 +1212,6 @@ function applyI18n(){
   var tog = document.getElementById('annoToggle'); tog.title = T.tipToggle;
   document.getElementById('annoResize').title = T.resizeTitle;
   document.getElementById('annoPanTitle').textContent = T.panel;
-  var au = document.getElementById('annoAuthor'); au.textContent = T.authorBtn; au.title = T.authorTitle;
   var dn = document.getElementById('annoDown'); dn.textContent = T.down; dn.title = T.downTitle;
   var exb = document.getElementById('annoExport'); exb.textContent = T.exBtn; exb.title = T.tipExport;
   var em = document.getElementById('annoExportMenu');
@@ -1798,7 +1782,7 @@ renderAll();
 
 /* ================= 閱讀器本體 ================= */
 (function(){
-var VER = 'v4.9';
+var VER = 'v4.10';
 var RECENTS_KEY = 'annoReader::recents';
 var DOC_PREFIX = 'annoReader::doc::';
 var LANG_KEY = 'annoReader::lang';
