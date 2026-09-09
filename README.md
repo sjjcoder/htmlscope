@@ -84,5 +84,3 @@
 > 產品頁（`index.html`）已對外宣告「非商業授權」，這份 LICENSE 就是那句宣告的依據 — 兩邊若要調整授權條件，記得一起改。
 
 **維護注意：`LICENSE` 請保持 PolyForm 原文逐字不動**，唯一允許的增補是開頭的 SPDX 標頭與 `Required Notice:` 版權行（後者是 PolyForm 條款本身要求的版權聲明載體，見其 Notices 一節，不可刪）。任何額外說明一律放 `LICENSE-zh.md` —— 先前把中文摘要夾在條款中間，除了讓授權文件的效力範圍變得可爭論之外，也讓 SPDX 掃描工具比對不到。
-
-> **GitHub 側欄不會顯示這個授權，這是正常的**：GitHub 的偵測只涵蓋 choosealicense.com 那 47 個授權（全是開源授權），PolyForm 屬於 source-available，不在名單內，API 一律回報 `NOASSERTION`。清理 LICENSE、加 SPDX 標頭都改變不了這件事 —— **不要再為了讓側欄顯示而去動 LICENSE**。要讓訪客看到非商業限制，靠 repo description、README 與產品頁。
