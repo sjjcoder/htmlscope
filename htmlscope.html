@@ -440,6 +440,7 @@ var ENGINE_UI =
 function ENGINE(){
 var KEY = window.__ANNO_KEY || 'anno::standalone::' + (document.title || 'doc');
 var NAME = window.__ANNO_NAME || document.title || 'document';
+var SCRIPT_WARN = window.__ANNO_SCRIPT_WARN;
 var UI = '#annoBar,#annoPop,#annoPanel,#annoToggle,#annoPromptOverlay,#annoDiffOverlay,#annoLegendMenu,#annoExportMenu,#annoAiMenu,#annoLegendEditOverlay,#annoToast';
 /* ---- 雙語字典:跟著 ENGINE.toString() 進傳閱版,收件人依自己的偏好/瀏覽器語言顯示 ---- */
 var I18N = {
@@ -523,6 +524,7 @@ var I18N = {
   exBtn:'📤 匯出', exTitle:'匯出標註',
   exPrint:'🖨 列印／存成 PDF', exPrintSub:'整份文件加上標記編號，文末附上註解對照表',
   printToast:'已打開列印視窗 — 在「目的地」或「印表機」選「另存為 PDF」就能存成 PDF 檔。標記處會自動加編號，文末附上所有註解。',
+  scriptWarnToast:'⚠️ 這份文件大部分內容像是要靠程式碼執行才會出現(例如互動式儀表板)——為了安全，載入時一律會把程式碼拆掉，所以你現在看到的可能只是空殼。建議改貼純文字內容，或用它原本的「匯出成靜態網頁」功能。',
   exReport:'📄 一頁標註清單', exReportSub:'只有標註跟留言（不含文件），適合貼進會議紀錄',
   exMd:'⬇ Markdown', exMdSub:'純文字待辦清單，給專案工具用（不用的人可以忽略）',
   exJson:'⟨⟩ JSON', exJsonSub:'給程式或 AI 讀的資料檔（不用的人可以忽略）',
@@ -615,6 +617,7 @@ var I18N = {
   exBtn:'📤 Export', exTitle:'Export annotations',
   exPrint:'🖨 Print / Save as PDF', exPrintSub:'The whole document with numbered highlights and a comment table at the end',
   printToast:'Print dialog opened — choose “Save as PDF” as the destination to get a PDF file. Highlights are numbered automatically and all comments are appended at the end.',
+  scriptWarnToast:'⚠️ Most of this document\'s content looks like it only appears after its own JavaScript runs (e.g. an interactive dashboard) — for safety, scripts are always stripped on load, so what you\'re seeing now may just be an empty shell. Try pasting the plain text instead, or use the document\'s own “export as static page” option if it has one.',
   exReport:'📄 One-page annotation list', exReportSub:'Just the annotations and comments (not the document) — for meeting notes',
   exMd:'⬇ Markdown', exMdSub:'Plain-text checklist for project tools (ignore if you do not use them)',
   exJson:'⟨⟩ JSON', exJsonSub:'Data file for scripts or AI (ignore if you do not use them)',
@@ -1783,11 +1786,14 @@ document.getElementById('annoLang').style.display = hasShell ? 'none' : '';
 /* JS 有在跑 → 互動功能接管,收掉給無 JS 環境看的靜態附錄與編號 */
 document.querySelectorAll('#annoStaticApp,.annoPrintNo').forEach(function(el){ el.remove(); });
 renderAll();
+/* 這份文件的內容很可能主要是程式碼跑出來的,不是被我們拆掉一小段無關緊要的東西——
+   拆掉程式碼是安全機制,不能因為這種文件就破例執行,只能提醒使用者可能看不到完整內容。 */
+if(SCRIPT_WARN) toast(T.scriptWarnToast, 10000);
 }
 
 /* ================= 閱讀器本體 ================= */
 (function(){
-var VER = 'v4.11';
+var VER = 'v4.12';
 var RECENTS_KEY = 'annoReader::recents';
 var DOC_PREFIX = 'annoReader::doc::';
 var LANG_KEY = 'annoReader::lang';
@@ -2051,9 +2057,13 @@ function cleanDocument(html){
      留言不會掉,只是那幾則之後會列為找不到位置。 */
   doc.querySelectorAll('svg mark.anno').forEach(function(m){
     var par = m.parentNode; while(m.firstChild) par.insertBefore(m.firstChild, m); par.removeChild(m); });
-  /* 內嵌的標記資料(純 JSON,不會執行)保留,交給引擎合併;其餘 script 全部移除 */
+  /* 內嵌的標記資料(純 JSON,不會執行)保留,交給引擎合併;其餘 script 全部移除。
+     順便量一下拆掉的 script 有多少字、跟拆完剩下的可見文字比——比值懸殊代表這份文件
+     的內容主要是程式碼跑出來的(互動式儀表板之類),不是單純不小心夾了段小工具程式碼。 */
+  var scriptChars = 0;
   doc.querySelectorAll('script').forEach(function(s){
     if(s.id === 'annoPreset' && s.type === 'application/json') return;
+    scriptChars += (s.textContent || '').length;
     s.remove(); });
   /* 文件帶著舊版引擎 CSS 時會跟新注入的樣式打架。v4.1 起引擎樣式帶 id,可以整塊移除;
      更早匯出的檔案沒有 id,只能逐條掃 —— 見 stripAnnoRules 的說明。 */
@@ -2071,12 +2081,14 @@ function cleanDocument(html){
     Array.prototype.slice.call(el.attributes).forEach(function(at){
       if(/^on/i.test(at.name)) el.removeAttribute(at.name);
       if((at.name === 'href' || at.name === 'src') && /^\s*javascript:/i.test(at.value)) el.removeAttribute(at.name); }); });
-  return { doc: doc };
+  var visibleChars = doc.body ? doc.body.textContent.replace(/\s+/g, ' ').trim().length : 0;
+  var likelyScriptRendered = scriptChars > 800 && scriptChars > visibleChars * 1.5;
+  return { doc: doc, likelyScriptRendered: likelyScriptRendered };
 }
 
-function buildInjection(key, name){
+function buildInjection(key, name, scriptWarn){
   return '<style id="annoEngineCss">' + ENGINE_CSS + '</style>' + ENGINE_UI +
-    '<scr' + 'ipt>window.__ANNO_KEY=' + JSON.stringify(key) + ';window.__ANNO_NAME=' + JSON.stringify(name) + '</scr' + 'ipt>' +
+    '<scr' + 'ipt>window.__ANNO_KEY=' + JSON.stringify(key) + ';window.__ANNO_NAME=' + JSON.stringify(name) + ';window.__ANNO_SCRIPT_WARN=' + JSON.stringify(!!scriptWarn) + '</scr' + 'ipt>' +
     '<scr' + 'ipt>(' + ENGINE.toString() + ')()</scr' + 'ipt>';
 }
 
@@ -2101,9 +2113,10 @@ function loadDoc(name, html){
   var cleanHTML = '<!doctype html>\n' + c.doc.documentElement.outerHTML;
   current = { key: key, name: name, cleanHTML: cleanHTML };
   /* 寫入 iframe 並注入標註引擎 */
+  var inj = buildInjection(key, name, c.likelyScriptRendered);
   var writeHTML = /<\/body>/i.test(cleanHTML)
-    ? cleanHTML.replace(/<\/body>/i, buildInjection(key, name) + '</body>')
-    : cleanHTML + buildInjection(key, name);
+    ? cleanHTML.replace(/<\/body>/i, inj + '</body>')
+    : cleanHTML + inj;
   var idoc = view.contentDocument;
   idoc.open(); idoc.write(writeHTML); idoc.close();
   document.body.classList.add('reading');
