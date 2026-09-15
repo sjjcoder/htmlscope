@@ -169,7 +169,7 @@ var ENGINE_CSS = [
 '.bdot.c-r,.dot.c-r{background:#e4574a}',
 '.bdot.c-g,.dot.c-g{background:#3cb878}',
 '.bdot.c-b,.dot.c-b{background:#4a90e2}',
-'#annoPop{position:fixed;z-index:2147483001;width:300px;background:var(--as);border:1px solid var(--aln);border-radius:10px;padding:12px;box-shadow:0 8px 28px rgba(0,0,0,.3);font-size:13px}',
+'#annoPop{position:fixed;z-index:2147483001;width:300px;overflow-y:auto;background:var(--as);border:1px solid var(--aln);border-radius:10px;padding:12px;box-shadow:0 8px 28px rgba(0,0,0,.3);font-size:13px}',
 '#annoPop .ap-drag{display:flex;align-items:center;justify-content:space-between;cursor:move;color:var(--amut);font-size:12px;margin:-6px -6px 4px;padding:0 0 0 4px;user-select:none;touch-action:none}',
 '#annoPop .ap-close{background:none;border:none;color:var(--amut);cursor:pointer;font-size:13px;padding:2px 8px}',
 '#annoPop .ap-close:hover{color:var(--adelt)}',
@@ -994,10 +994,14 @@ function openPop(id, rect){
   pop.querySelector('.ap-res').textContent = a.resolved ? T.reopen : T.resolve;
   pop.querySelectorAll('.ap-colors button').forEach(function(x){ x.classList.toggle('sel', x.dataset.c === a.color); });
   pop.hidden = false;
+  pop.style.maxHeight = ''; /* 量高度前先清掉,不然量到的是上一次夾出來的高度 */
   var x = Math.min(Math.max(8, rect.left), window.innerWidth - pop.offsetWidth - 8);
   var y = rect.bottom + 8;
   if(y + pop.offsetHeight > window.innerHeight - 8) y = Math.max(8, rect.top - pop.offsetHeight - 8);
   pop.style.left = x + 'px'; pop.style.top = y + 'px';
+  /* 視窗矮或對話串很長時,整個視窗本身也要能捲動,不能只靠裡面 .ap-thread 那條——
+     否則送出鈕會被切到畫面外,唯一救法是縮小瀏覽器縮放比例(使用者真的這樣做過)。 */
+  pop.style.maxHeight = Math.max(160, window.innerHeight - y - 8) + 'px';
   pop.querySelector('.ap-cta').focus(); }
 document.addEventListener('click', function(e){
   if(!e.target.closest) return;
@@ -1012,7 +1016,8 @@ pop.querySelector('.ap-drag').addEventListener('pointerdown', function(e){
   function mv(ev){
     var x = Math.min(Math.max(4, r.left + ev.clientX - sx), window.innerWidth - pop.offsetWidth - 4);
     var y = Math.min(Math.max(4, r.top + ev.clientY - sy), window.innerHeight - 40);
-    pop.style.left = x + 'px'; pop.style.top = y + 'px'; }
+    pop.style.left = x + 'px'; pop.style.top = y + 'px';
+    pop.style.maxHeight = Math.max(160, window.innerHeight - y - 8) + 'px'; }
   function up(){ document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); }
   document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up); });
 pop.querySelector('.ap-close').addEventListener('click', function(){ closePop(); });
@@ -1782,7 +1787,7 @@ renderAll();
 
 /* ================= 閱讀器本體 ================= */
 (function(){
-var VER = 'v4.10';
+var VER = 'v4.11';
 var RECENTS_KEY = 'annoReader::recents';
 var DOC_PREFIX = 'annoReader::doc::';
 var LANG_KEY = 'annoReader::lang';
@@ -1846,7 +1851,7 @@ var SHELL_I18N = {
    '<li><b>🤖 比較版本</b>：AI 改完傳回來後，用這個看它這一輪到底改了哪裡（紅色刪除線＝舊的、綠色底線＝新的）</li>'+
    '<li><b>📤 匯出</b>：🖨 列印／存成 PDF（整份文件＋標記編號＋文末註解對照表）／📄 一頁標註清單（只有標註，貼會議紀錄用）／Markdown／JSON</li>'+
    '<li><b>🎨 顏色</b>：切換四色代表的意思（一般審閱／AI 報告審閱／自訂）。已經標好的標註會保留當初的分類不變，只有之後新標的才用新意義</li>'+
-   '<li><b>👤 名稱</b>｜<b>🌐</b> 切換中英文介面（你的留言內容不會被翻譯）</li></ul>'+
+   '<li><b>🌐</b> 切換中英文介面（你的留言內容不會被翻譯）</li></ul>'+
    '</details>'+
    '<details>'+
    '<summary>🔧 疑難與細節 <span class="cnt">標記跑掉了？換電腦？手機能看嗎？</span></summary><ul>'+
@@ -1855,6 +1860,7 @@ var SHELL_I18N = {
    '<li><b>文件小幅修改</b>：標記會自動找回原本的位置，不用重標</li>'+
    '<li><b>換電腦／換瀏覽器</b>：標記存在這台電腦的瀏覽器裡，換裝置請按「⬇ 傳閱版」，開那個檔案就能接著用</li>'+
    '<li><b>安全性</b>：載入的文件會先自動移除裡面的程式碼才顯示，收到來路不明的 HTML 也能安心開</li>'+
+   '<li><b>部分內容整段不見</b>：如果文件的內容是靠自己內嵌的 JavaScript 執行後才產生出來的（例如某些互動式儀表板、要跑程式才會填資料的報表），那部分就不會出現——安全起見，載入時程式碼一律會被拿掉。這類文件請改用它本身「匯出/另存成靜態網頁」的功能，或把裡面的文字內容直接複製貼上進來標註</li>'+
    '<li><b>列印／存 PDF</b>：用「📤 匯出 → 🖨 列印／存成 PDF」（或直接按 Ctrl+P），在列印視窗選「另存為 PDF」就能存檔；標記處會自動加編號、文末附上所有註解</li>'+
    '<li><b>手機收到傳閱版</b>：聊天軟體或信件的預覽視窗不會執行程式，但螢光標記和文末「📝 標註對照表」直接看得到；要回覆或加標，選「用瀏覽器開啟」即可</li>'+
    '<li><b>圖片沒顯示</b>：文件裡用相對路徑引用的外部圖片不會出現（圖片直接內嵌在檔案裡的 HTML 不受影響）</li></ul>'+
@@ -1914,7 +1920,7 @@ var SHELL_I18N = {
    '<li><b>\ud83e\udd16 Compare versions</b>: after the AI sends its revision back, use this to see exactly what changed this round (red strikethrough = old, green underline = new)</li>'+
    '<li><b>\ud83d\udce4 Export</b>: \ud83d\udda8 Print / Save as PDF (the whole document with numbered highlights and a comment table) / \ud83d\udcc4 one-page annotation list (annotations only \u2014 for meeting notes) / Markdown / JSON</li>'+
    '<li><b>\ud83c\udfa8 Colors</b>: switch what the four colors mean (general review / AI report review / custom). Existing annotations keep the category they were created with \u2014 only new ones use the new meanings</li>'+
-   '<li><b>\ud83d\udc64 Name</b> and <b>\ud83c\udf10</b> switch interface language (your comment text is never translated)</li></ul>'+
+   '<li><b>\ud83c\udf10</b> switch interface language (your comment text is never translated)</li></ul>'+
    '</details>'+
    '<details>'+
    '<summary>\ud83d\udd27 Troubleshooting <span class="cnt">highlight moved? switching computers? does it work on a phone?</span></summary><ul>'+
@@ -1923,6 +1929,7 @@ var SHELL_I18N = {
    '<li><b>Minor document revisions</b>: highlights re-anchor themselves automatically, no need to redo them</li>'+
    '<li><b>Switching computers or browsers</b>: annotations live in this browser \u2014 press \u201c\u2b07 Annotated copy\u201d and open that file on the other machine to continue</li>'+
    '<li><b>Safety</b>: loaded documents are stripped of scripts before they render, so HTML from unknown sources is safe to open</li>'+
+   '<li><b>Part of the content is missing entirely</b>: if a document builds its content with its own embedded JavaScript (e.g. an interactive dashboard that only fills in data after its script runs), that part won\'t show — scripts are always stripped on load for safety. For documents like that, use its own "export as static page" option if it has one, or copy the text content and paste it in directly instead</li>'+
    '<li><b>Printing / saving as PDF</b>: use \u201c\ud83d\udce4 Export \u2192 \ud83d\udda8 Print / Save as PDF\u201d (or just press Ctrl+P) and pick \u201cSave as PDF\u201d as the destination; highlights are numbered automatically and every comment is appended at the end</li>'+
    '<li><b>Receiving an annotated copy on a phone</b>: preview windows in chat apps and mail do not run scripts, but the highlights and the \u201c\ud83d\udcdd Annotation table\u201d at the end are still visible; to reply or annotate, choose \u201cOpen in browser\u201d</li>'+
    '<li><b>Images missing</b>: images referenced by relative paths will not appear (HTML with images embedded directly in the file is unaffected)</li></ul>'+
