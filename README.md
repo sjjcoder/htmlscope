@@ -63,6 +63,7 @@
 - **新增浮動/彈出元件時，除了調色盤變數清單（見上）之外，還要檢查 `@media print` 的隱藏清單**——`window.print()` 只套用 CSS 的 `print` media，跟元件當下是否 `hidden` 無關，漏列的浮動元件列印/存 PDF 時會直接蓋住底下的文字。這份隱藏清單應該跟 `UI` 變數（ENGINE 內）保持同一份成員，兩邊分別維護容易漏
 - **`index.html` 的 `header` 是 `position:sticky`（62px 高）——任何錨點連結（導覽列、頁尾連結）的目標元素都要設 `scroll-margin-top:80px`**，否則瀏覽器原生錨點跳轉只會把目標頂端對到視窗最頂端，完全不知道上面蓋著一條固定頁首，目標前 60~80px 永遠被蓋住。新增任何 `id="..."` 錨點目標記得回頭加進這條規則的選擇器清單
 - **`cleanDocument()` 會順手偵測「這份文件的內容是不是主要靠自己的 script 動態產生的」**（`scriptChars > 800 && scriptChars > visibleChars * 1.5`，`visibleChars` 量的是拆完 script/style 剩下的 `body.textContent`）——這兩個門檻是拿一份真實回報的互動式儀表板（script 一萬字元、拆完可見文字不到一千）校準出來的，不是隨手訂的數字。**不是要偵測「有沒有 script」，是要偵測「這份文件的實質內容是不是活在被拆掉的那段程式碼裡」**，觸發時只會提醒使用者（`toast`），不會因此破例執行程式碼——這條安全底線不能因為偵測到什麼就打折扣
+- **「內容靠 script 動態產生的文件」評估過、決定不支援——不要再重新爭論一次**（2026-09-16）。技術上有一條安全的路：`<iframe sandbox="allow-scripts">`（**絕不加** `allow-same-origin`，否則沙箱可以自己拆掉）＋ 寫入前在 `<head>` 注入 `default-src 'none'; connect-src 'none'; script-src 'unsafe-inline'; img-src data:` 的 meta CSP 封掉全部網路 ＋ 跑完用 `postMessage` 把 `outerHTML` 丟回來、iframe 立刻銷毀 ＋ 快照走一模一樣的 `cleanDocument()` ＋ 超時與大小上限，而且**只能 opt-in（使用者按了按鈕才跑），絕不自動**。這樣資料不外洩、碰不到 htmlscope、沒有網路、不留痕跡，殘留風險只剩惡意無窮迴圈可以卡死分頁（關掉重開即可，標註即時存進 localStorage 不會掉）。**決定不做的原因**：中型功能、會動到「不執行程式碼」這個對外承諾、只服務一種少見的檔案格式，而「複製文字貼上」現在就能用、上面那條偵測也已經會提醒使用者怎麼繞——投入跟回報不成比例。哪天真的要做，照上面的邊界做，不要放寬任何一項
 
 ## 已知雷
 
