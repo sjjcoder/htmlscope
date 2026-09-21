@@ -83,8 +83,9 @@ header{
 .brand .sq::after{content:"";position:absolute;left:3px;right:3px;bottom:3px;height:5px;border-radius:1px;background:var(--hl-y)}
 /* header 是 position:sticky 蓋在最上面(62px 高)——沒有這行的話,錨點連結會把目標元素的頂端
    對齊到視窗最頂端,結果前面 60~80px 被固定 header 蓋住,看起來像跳到「奇怪的位置」。
-   #fork/#how/#nofile/#ai-loop/#privacy/#get 是導覽列的錨點,#license 是頁尾授權說明連結的目標。 */
-#fork,#how,#nofile,#ai-loop,#privacy,#get,#license{scroll-margin-top:80px}
+   #fork/#how/#nofile/#ai-loop/#privacy/#get 是導覽列的錨點,#license 是頁尾授權說明連結的目標,
+   #commercial 是授權說明裡「取得商業授權」連結的目標。 */
+#fork,#how,#nofile,#ai-loop,#privacy,#get,#license,#commercial{scroll-margin-top:80px}
 .nav .spring{margin-left:auto}
 .nav a.navlink{font-size:14px;color:var(--ink-2);text-decoration:none;display:none}
 .nav a.navlink:hover{color:var(--ink)}
@@ -291,6 +292,20 @@ section{padding:72px 0}
 .cmp-note{margin-top:16px;padding:14px 18px;background:var(--accent-soft);border:1px solid var(--line-2);border-radius:10px;font-size:14px;line-height:1.6;color:var(--ink-2)}
 .cmp-note b{color:var(--ink)}
 .cmp-note a{color:var(--accent-ink);text-decoration:underline;text-decoration-color:var(--line-2)}
+
+/* commercial licence — 定價卡。三欄並排，窄螢幕自動堆疊。
+   刻意不做「最受歡迎」之類的推銷標籤：買家是為了合規而來，不是被說服而來。 */
+.tiers{display:grid;gap:14px;grid-template-columns:1fr;margin-top:8px}
+@media(min-width:760px){.tiers{grid-template-columns:repeat(3,1fr)}}
+.tier{border:1px solid var(--line);border-radius:14px;padding:22px 20px 24px;background:var(--surface-2);display:flex;flex-direction:column}
+.tier .name{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:700}
+.tier .price{font-size:34px;font-weight:700;margin:10px 0 2px;letter-spacing:-.02em}
+.tier .price small{font-size:14px;font-weight:600;color:var(--ink-3);letter-spacing:0}
+.tier .who{color:var(--ink-2);font-size:14.5px;line-height:1.6;margin:8px 0 0;flex:1}
+.tier .once{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);margin-top:14px;letter-spacing:.04em}
+.lic-cta{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:26px}
+.lic-fine{color:var(--ink-3);font-size:13.5px;line-height:1.65;margin-top:18px;max-width:64ch}
+.lic-fine a{color:var(--accent-ink);text-decoration:underline;text-decoration-color:var(--line-2)}
 
 /* final cta */
 .final{text-align:center;padding:96px 0}
@@ -585,7 +600,48 @@ footer{border-top:1px solid var(--line);padding:40px 0;color:var(--ink-3);font-s
     <p class="cmp-note" id="license">
       <b data-en="Who this is free for:" data-zh="免費的對象：">Who this is free for:</b>
       <span data-en=" personal use, academic research, and internal use at nonprofits or government agencies — no need to ask. A for-profit company using it for day-to-day team review counts as commercial use; " data-zh=" 個人使用、學術研究、非營利組織與政府機關內部使用完全免費，不用問。一般公司如果要在團隊裡日常拿來審閱文件，屬於商業使用，">personal use, academic research, and internal use at nonprofits or government agencies — no need to ask. A for-profit company using it for day-to-day team review counts as commercial use;</span>
-      <a href="https://github.com/sjjcoder/htmlscope/issues/new" data-en="contact the author first" data-zh="請先聯絡作者取得授權">contact the author first</a><span data-en=". Open source doesn't mean free for commercial use — see the " data-zh="。原始碼公開，不等於商業使用也免費——完整條款見 ">. Open source doesn't mean free for commercial use — see the </span><a href="https://github.com/sjjcoder/htmlscope/blob/main/LICENSE-zh.md" data-en="full terms" data-zh="LICENSE-zh.md">full terms</a><span data-en="." data-zh="。"></span>
+      <a href="#commercial" data-en="a commercial licence covers that" data-zh="請取得商業授權">a commercial licence covers that</a><span data-en=". Open source doesn't mean free for commercial use — see the " data-zh="。原始碼公開，不等於商業使用也免費——完整條款見 ">. Open source doesn't mean free for commercial use — see the </span><a href="https://github.com/sjjcoder/htmlscope/blob/main/LICENSE-zh.md" data-en="full terms" data-zh="LICENSE-zh.md">full terms</a><span data-en="." data-zh="。"></span>
+    </p>
+  </section>
+
+  <!-- COMMERCIAL LICENCE -->
+  <section class="wrap" id="commercial">
+    <div class="sec-head">
+      <p class="eyebrow" data-en="Commercial licence" data-zh="商業授權">Commercial licence</p>
+      <h2 data-en="Free for most people. Paid if your company runs on it." data-zh="多數人免費。公司靠它做事，就該付費。">Free for most people. Paid if your company runs on it.</h2>
+      <p data-en="Personal, academic, nonprofit and government use stay free forever — you don't need to buy anything or ask permission. The tiers below exist for for-profit organizations." data-zh="個人、學術、非營利與政府機關使用永遠免費，不必購買也不必詢問。下面的方案是給營利組織的。">Personal, academic, nonprofit and government use stay free forever.</p>
+    </div>
+
+    <div class="tiers">
+      <div class="tier">
+        <span class="name">Solo</span>
+        <div class="price">$39</div>
+        <p class="who" data-en="One named individual using HTMLScope for commercial work — freelancers and independent consultants." data-zh="一位指名的個人將 HTMLScope 用於商業工作，例如自由工作者與獨立顧問。">One named individual using HTMLScope for commercial work — freelancers and independent consultants.</p>
+        <span class="once" data-en="ONE-TIME · PERPETUAL" data-zh="一次性 · 永久授權">ONE-TIME · PERPETUAL</span>
+      </div>
+      <div class="tier">
+        <span class="name">Team</span>
+        <div class="price">$149</div>
+        <p class="who" data-en="Up to 25 people within a single organization." data-zh="單一組織內 25 人以下使用。">Up to 25 people within a single organization.</p>
+        <span class="once" data-en="ONE-TIME · PERPETUAL" data-zh="一次性 · 永久授權">ONE-TIME · PERPETUAL</span>
+      </div>
+      <div class="tier">
+        <span class="name">Organization</span>
+        <div class="price">$399</div>
+        <p class="who" data-en="Unlimited people within one legal entity, including embedding the annotation engine in your internal tools." data-zh="單一法人內不限人數，並可將標註引擎嵌入內部工具。">Unlimited people within one legal entity, including embedding the annotation engine in your internal tools.</p>
+        <span class="once" data-en="ONE-TIME · PERPETUAL" data-zh="一次性 · 永久授權">ONE-TIME · PERPETUAL</span>
+      </div>
+    </div>
+
+    <div class="lic-cta">
+      <!-- ⚠️ 設定 Gumroad 後，把下面的 href 換成商品頁網址；在那之前先連到條款全文。 -->
+      <a class="btn primary" href="https://github.com/sjjcoder/htmlscope/blob/main/COMMERCIAL-LICENSE.md" id="buylink" data-en="Get a commercial licence" data-zh="取得商業授權">Get a commercial licence</a>
+      <a class="btn ghost" href="https://github.com/sjjcoder/htmlscope/blob/main/COMMERCIAL-LICENSE.md" data-en="Read the full terms" data-zh="閱讀完整條款">Read the full terms</a>
+    </div>
+
+    <p class="lic-fine">
+      <span data-en="All tiers are one-time and perpetual — no subscription, no renewal — and include every future version. Annotated copies you produce can be sent to anyone, including clients outside your organization; recipients never need a licence to read or reply. There is no telemetry, no licence check and no phone-home in the tool, so seat counts are on your honour. Need to redistribute HTMLScope inside a product you sell, or want a signed agreement on your own paper? " data-zh="所有方案都是一次付費、永久有效，沒有訂閱也沒有續約，並包含日後所有版本。你產生的傳閱版可以傳給任何人，包含組織外的客戶，收件者不需要授權就能閱讀與回覆。工具本身沒有任何回報機制或授權檢查，人數計算採信任制。如果需要把 HTMLScope 包進你自己販售的產品，或需要以貴公司格式簽署授權合約，">All tiers are one-time and perpetual and include every future version.</span>
+      <a href="https://github.com/sjjcoder/htmlscope/issues/new" data-en="open an issue" data-zh="請開一個 issue 聯絡">open an issue</a><span data-en="." data-zh="。"></span>
     </p>
   </section>
 
