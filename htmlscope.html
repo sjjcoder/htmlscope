@@ -1,4 +1,21 @@
 <!doctype html>
+<!--
+  HTMLScope — HTML 標註閱讀器 / HTML annotation reader
+  https://github.com/sjjcoder/htmlscope
+
+  SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+  Copyright (c) 2026 sjjcoder
+
+  免費：個人使用、學術研究、非營利組織與政府機關內部使用。不必詢問。
+  需付費授權：營利組織的日常使用、或嵌入收費產品。
+  Free for personal, academic, nonprofit and government-internal use.
+  A commercial licence is required for for-profit organizations:
+  https://github.com/sjjcoder/htmlscope/blob/main/COMMERCIAL-LICENSE.md
+
+  ⚠️ 這段註解是授權掃描工具唯一讀得到的地方 —— 本檔案會被直接下載、轉寄，
+     多數使用者永遠不會開啟產品頁。移除這段等於讓檔案變成「授權不明」，
+     對想合規的公司反而更麻煩。請保留。
+-->
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -1654,7 +1671,23 @@ function buildStandalone(){
     var s = document.createElement('script'); s.type = 'application/json'; s.id = 'annoPreset'; s.textContent = json;
     var body = clone.querySelector('body') || clone;
     body.insertBefore(s, body.querySelector('script')); }
-  return '<!doctype html>\n' + clone.outerHTML; }
+  /* 傳閱版是本專案傳得最遠的產物 —— 它會被轉寄、被存進共用磁碟、被再轉寄一次，
+     而收件者多半從未看過產品頁。這段註解讓檔案本身說明自己的來歷與授權狀態：
+     對收件者是資訊，對做授權盤點的人是線索，兩者都不必打擾正在閱讀文件的人。
+     注意：放在 <!doctype> 之後、<html> 之前，不影響解析，也不會進入 DOM。 */
+  var credit = '<!--\n' +
+    '  這份檔案的標註功能由 HTMLScope 提供　This file was annotated with HTMLScope\n' +
+    '  https://github.com/sjjcoder/htmlscope\n' +
+    '  SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0 (tool only)\n' +
+    '  Copyright (c) 2026 sjjcoder\n' +
+    '\n' +
+    '  文件內容的著作權屬於原作者，不受本授權影響。\n' +
+    '  The document content belongs to its own author and is not covered by this licence.\n' +
+    '  閱讀與回覆標註不需要任何授權。營利組織若將本工具用於日常工作，需取得商業授權：\n' +
+    '  Reading and replying needs no licence. For-profit day-to-day use needs one:\n' +
+    '  https://github.com/sjjcoder/htmlscope/blob/main/COMMERCIAL-LICENSE.md\n' +
+    '-->\n';
+  return '<!doctype html>\n' + credit + clone.outerHTML; }
 window.__annoBuild = buildStandalone;
 document.getElementById('annoDown').addEventListener('click', function(){
   var out = buildStandalone();
@@ -1793,7 +1826,7 @@ if(SCRIPT_WARN) toast(T.scriptWarnToast, 10000);
 
 /* ================= 閱讀器本體 ================= */
 (function(){
-var VER = 'v4.12';
+var VER = 'v4.13';
 var RECENTS_KEY = 'annoReader::recents';
 var DOC_PREFIX = 'annoReader::doc::';
 var LANG_KEY = 'annoReader::lang';
@@ -1869,7 +1902,8 @@ var SHELL_I18N = {
    '<li><b>部分內容整段不見</b>：如果文件的內容是靠自己內嵌的 JavaScript 執行後才產生出來的（例如某些互動式儀表板、要跑程式才會填資料的報表），那部分就不會出現——安全起見，載入時程式碼一律會被拿掉。這類文件請改用它本身「匯出/另存成靜態網頁」的功能，或把裡面的文字內容直接複製貼上進來標註</li>'+
    '<li><b>列印／存 PDF</b>：用「📤 匯出 → 🖨 列印／存成 PDF」（或直接按 Ctrl+P），在列印視窗選「另存為 PDF」就能存檔；標記處會自動加編號、文末附上所有註解</li>'+
    '<li><b>手機收到傳閱版</b>：聊天軟體或信件的預覽視窗不會執行程式，但螢光標記和文末「📝 標註對照表」直接看得到；要回覆或加標，選「用瀏覽器開啟」即可</li>'+
-   '<li><b>圖片沒顯示</b>：文件裡用相對路徑引用的外部圖片不會出現（圖片直接內嵌在檔案裡的 HTML 不受影響）</li></ul>'+
+   '<li><b>圖片沒顯示</b>：文件裡用相對路徑引用的外部圖片不會出現（圖片直接內嵌在檔案裡的 HTML 不受影響）</li>'+
+   '<li><b>公司可以用嗎？</b>：個人、學術研究、非營利組織與政府機關內部使用<b>完全免費</b>，不必詢問。營利公司拿來當日常工作的一部分，屬於商業使用，需要一次性的商業授權（<a href="https://github.com/sjjcoder/htmlscope#commercial" target="_blank" rel="noopener">說明與方案</a>）。你產生的傳閱版可以傳給任何人，收件者不需要授權就能閱讀與回覆。</li></ul>'+
    '</details>'
  },
  en: {
@@ -1938,7 +1972,8 @@ var SHELL_I18N = {
    '<li><b>Part of the content is missing entirely</b>: if a document builds its content with its own embedded JavaScript (e.g. an interactive dashboard that only fills in data after its script runs), that part won\'t show — scripts are always stripped on load for safety. For documents like that, use its own "export as static page" option if it has one, or copy the text content and paste it in directly instead</li>'+
    '<li><b>Printing / saving as PDF</b>: use \u201c\ud83d\udce4 Export \u2192 \ud83d\udda8 Print / Save as PDF\u201d (or just press Ctrl+P) and pick \u201cSave as PDF\u201d as the destination; highlights are numbered automatically and every comment is appended at the end</li>'+
    '<li><b>Receiving an annotated copy on a phone</b>: preview windows in chat apps and mail do not run scripts, but the highlights and the \u201c\ud83d\udcdd Annotation table\u201d at the end are still visible; to reply or annotate, choose \u201cOpen in browser\u201d</li>'+
-   '<li><b>Images missing</b>: images referenced by relative paths will not appear (HTML with images embedded directly in the file is unaffected)</li></ul>'+
+   '<li><b>Images missing</b>: images referenced by relative paths will not appear (HTML with images embedded directly in the file is unaffected)</li>'+
+   '<li><b>Can my company use this?</b>: personal use, academic research, and internal use at nonprofits or government agencies are <b>free</b> — no need to ask. A for-profit company using it as part of day-to-day work needs a one-time commercial licence (<a href="https://github.com/sjjcoder/htmlscope#commercial" target="_blank" rel="noopener">tiers and terms</a>). Annotated copies you produce can be sent to anyone; recipients never need a licence to read or reply.</li></ul>'+
    '</details>'
  }
 };
